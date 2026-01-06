@@ -1,5 +1,6 @@
 package com.rakibjoy.problembuddy
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.rememberNavController
 import com.rakibjoy.problembuddy.presentation.navigation.AppNavigation
 import com.rakibjoy.problembuddy.presentation.ui.theme.ProblemBuddyTheme
@@ -21,7 +23,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ProblemBuddyTheme {
                 val navController = rememberNavController()
-                val globalIntent = GlobalNavigationIntent(application)
+                val globalIntent = GlobalNavigationIntent()
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
                         AppNavigation(navController = navController,globalIntent)

@@ -6,19 +6,23 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.rakibjoy.problembuddy.presentation.ui.screens.DetailsScreen
 import com.rakibjoy.problembuddy.presentation.ui.screens.HomeScreen
+import com.rakibjoy.problembuddy.presentation.ui.screens.TrainingScreen
 import com.rakibjoy.problembuddy.presentation.viewmodels.GlobalNavigationIntent
 
 @Composable
 fun AppNavigation(navController: NavHostController, globalIntent: GlobalNavigationIntent) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Training.route
     ) {
         composable(route = Screen.Home.route) {
             HomeScreen(navController,globalIntent)
         }
         composable(route = Screen.Details.route) {
             DetailsScreen(navController,globalIntent)
+        }
+        composable(route = Screen.Training.route) {
+            TrainingScreen(navController,globalIntent)
         }
     }
 }
