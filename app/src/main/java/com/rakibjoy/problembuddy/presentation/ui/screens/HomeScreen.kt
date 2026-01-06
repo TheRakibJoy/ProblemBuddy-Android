@@ -7,9 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import com.rakibjoy.problembuddy.presentation.viewmodels.GlobalNavigationIntent
 
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen(navController: NavHostController, globalIntent: GlobalNavigationIntent) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center

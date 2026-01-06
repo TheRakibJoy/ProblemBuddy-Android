@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.rakibjoy.problembuddy.presentation.navigation.AppNavigation
 import com.rakibjoy.problembuddy.presentation.ui.theme.ProblemBuddyTheme
+import com.rakibjoy.problembuddy.presentation.viewmodels.GlobalNavigationIntent
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,9 +21,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             ProblemBuddyTheme {
                 val navController = rememberNavController()
+                val globalIntent = GlobalNavigationIntent(application)
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        AppNavigation(navController = navController)
+                        AppNavigation(navController = navController,globalIntent)
                     }
                 }
             }
