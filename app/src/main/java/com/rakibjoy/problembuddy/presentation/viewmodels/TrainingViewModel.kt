@@ -1,7 +1,11 @@
 package com.rakibjoy.problembuddy.presentation.viewmodels
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.rakibjoy.problembuddy.data.api.RetrofitInstance
+import kotlinx.coroutines.launch
 
 class TrainingViewModel(application: Application) : AndroidViewModel(application) {
     fun onEvent(event: TrainingEvents) {
@@ -13,7 +17,18 @@ class TrainingViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun onNewHandle(handle: String) {
-
+        viewModelScope.launch {
+            try {
+                val response = RetrofitInstance.contestHistoryApi.getUserRating(handle.trim().lowercase().replace(" ", ""))
+                if (response.status == "OK") {
+                    Log.d("TrainingViewModel", "Success: ${response.result}")
+                } else {
+                    Log.e("TrainingViewModel", "Error: ${response.status}")
+                }
+            } catch (e: Exception) {
+                Log.e("TrainingViewModel", "Exception: ${e.message}")
+            }
+        }
     }
 }
 
