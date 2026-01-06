@@ -23,12 +23,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.rakibjoy.problembuddy.presentation.viewmodels.GlobalNavigationIntent
+import com.rakibjoy.problembuddy.presentation.viewmodels.TrainingEvents
 import com.rakibjoy.problembuddy.presentation.viewmodels.TrainingViewModel
 
 @Composable
 fun TrainingScreen(navController: NavHostController, globalIntent: GlobalNavigationIntent) {
 
-    val viewModel: TrainingViewModel = TrainingViewModel(LocalContext.current.applicationContext as Application)
+    val viewModel = TrainingViewModel(LocalContext.current.applicationContext as Application)
 
     var handle by remember { mutableStateOf("") }
 
@@ -51,7 +52,7 @@ fun TrainingScreen(navController: NavHostController, globalIntent: GlobalNavigat
         
         Button(
             onClick = {
-
+                viewModel.onEvent(TrainingEvents.NewHandle(handle))
             },
             modifier = Modifier.fillMaxWidth()
         ) {
