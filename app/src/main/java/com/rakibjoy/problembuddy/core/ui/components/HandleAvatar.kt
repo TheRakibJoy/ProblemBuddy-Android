@@ -25,6 +25,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
 import com.rakibjoy.problembuddy.core.ui.theme.gradient
+import com.rakibjoy.problembuddy.core.ui.theme.palette
 import com.rakibjoy.problembuddy.domain.model.Tier
 
 /**
@@ -42,6 +43,7 @@ fun HandleAvatar(
     val initial = handle?.trim()?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     val fallbackBrush: Brush = tier?.gradient()
         ?: Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
+    val fallbackTextColor = tier?.palette()?.onColor ?: Color.White
 
     var loadFailed by remember(avatarUrl) { mutableStateOf(false) }
 
@@ -65,7 +67,7 @@ fun HandleAvatar(
         } else {
             Text(
                 text = initial,
-                color = Color.White,
+                color = fallbackTextColor,
                 fontWeight = FontWeight.Bold,
                 style = when {
                     size >= 72.dp -> MaterialTheme.typography.displaySmall

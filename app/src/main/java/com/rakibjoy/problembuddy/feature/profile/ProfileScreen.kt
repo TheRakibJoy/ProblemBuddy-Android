@@ -1,6 +1,7 @@
 package com.rakibjoy.problembuddy.feature.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +38,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -232,8 +237,25 @@ private fun HeroCard(
     val brush: Brush = currentTier?.gradient()
         ?: Brush.verticalGradient(listOf(primary, secondary))
     val onColor = currentTier?.palette()?.onColor ?: Color.White
+    val heroDescription = buildString {
+        append(handle ?: "Unknown handle")
+        if (currentTier != null) {
+            append(", ")
+            append(currentTier.label)
+        }
+        if (rating != null) {
+            append(", rating ")
+            append(rating)
+        }
+        if (maxRating != null && maxRating != rating) {
+            append(", max ")
+            append(maxRating)
+        }
+    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = heroDescription },
         shape = AppShapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = Elevations.hover),
@@ -258,7 +280,7 @@ private fun HeroCard(
             ) {
                 Text(
                     text = handle ?: "—",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     color = onColor,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -323,35 +345,58 @@ private fun TierPill(tier: Tier, currentTier: Tier?) {
         isPast -> MaterialTheme.colorScheme.onSurface
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val scale = if (isCurrent) 1.1f else 1f
+    val scale = if (isCurrent) 1.12f else 1f
     val elevation = if (isCurrent) Elevations.hover else 0.dp
-    Card(
-        modifier = Modifier
+    val primary = MaterialTheme.colorScheme.primary
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        val cardModifier = Modifier
             .width(96.dp)
             .height(64.dp)
-            .scale(scale),
-        shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(containerColor = bg, contentColor = fg),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(Spacing.xs),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = tier.initials(),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = fg,
-                textAlign = TextAlign.Center,
+            .scale(scale)
+            .then(
+                if (isCurrent) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = primary.copy(alpha = 0.5f),
+                        shape = AppShapes.medium,
+                    )
+                } else {
+                    Modifier
+                },
             )
-            Text(
-                text = "${tier.floor}+",
-                style = MaterialTheme.typography.bodySmall,
-                color = fg,
-                textAlign = TextAlign.Center,
+        Card(
+            modifier = cardModifier,
+            shape = AppShapes.medium,
+            colors = CardDefaults.cardColors(containerColor = bg, contentColor = fg),
+            elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Spacing.xs),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = tier.initials(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = fg,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "${tier.floor}+",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = fg,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        if (isCurrent) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowUp,
+                contentDescription = null,
+                tint = primary,
+                modifier = Modifier.size(14.dp),
             )
         }
     }

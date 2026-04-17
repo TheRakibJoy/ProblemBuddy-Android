@@ -54,7 +54,7 @@ fun StatCard(
         ) {
             Box(
                 modifier = Modifier
-                    .width(3.dp)
+                    .width(5.dp)
                     .fillMaxHeight()
                     .background(accent),
             )

@@ -14,12 +14,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,25 +29,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilterAltOff
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -63,16 +66,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
 import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
@@ -83,14 +85,24 @@ import com.rakibjoy.problembuddy.core.ui.components.TagChip
 import com.rakibjoy.problembuddy.core.ui.components.TierBadge
 import com.rakibjoy.problembuddy.core.ui.components.pressScale
 import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
+import com.rakibjoy.problembuddy.core.ui.theme.Elevations
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
-import com.rakibjoy.problembuddy.domain.model.ThemeMode
 import com.rakibjoy.problembuddy.core.ui.theme.Spacing
-import com.rakibjoy.problembuddy.core.ui.theme.gradient
 import com.rakibjoy.problembuddy.core.ui.theme.palette
 import com.rakibjoy.problembuddy.domain.model.Filters
 import com.rakibjoy.problembuddy.domain.model.Problem
+import com.rakibjoy.problembuddy.domain.model.ThemeMode
 import com.rakibjoy.problembuddy.domain.model.Tier
+
+private val KnownTags: List<String> = listOf(
+    "2-sat", "binary search", "bitmasks", "brute force", "chinese remainder theorem",
+    "combinatorics", "constructive algorithms", "data structures", "dfs and similar",
+    "divide and conquer", "dp", "dsu", "expression parsing", "fft", "flows", "games",
+    "geometry", "graph matchings", "graphs", "greedy", "hashing", "implementation",
+    "interactive", "math", "matrices", "meet-in-the-middle", "number theory",
+    "probabilities", "schedules", "shortest paths", "sortings", "string suffix structures",
+    "strings", "ternary search", "trees", "two pointers",
+)
 
 @Composable
 fun RecommendScreen(
@@ -279,157 +291,182 @@ private fun ProblemCard(
     onSkip: () -> Unit,
 ) {
     val tier = remember(problem.rating) { Tier.forMaxRating(problem.rating ?: 0) }
-    val palette = tier.palette()
-    val brush = remember(tier) { tier.gradient() }
-    val onColor = palette.onColor
+    val accent = tier.palette().strong
     val shape = AppShapes.large
     val displayName = problem.name.ifBlank { "Problem ${problem.contestId}${problem.problemIndex}" }
-    Box(
+    val outline = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .pressScale(0.98f)
-            .clip(shape)
-            .background(brush),
+            .pressScale(0.98f),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.card),
+        border = androidx.compose.foundation.BorderStroke(1.dp, outline),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 200.dp)
-                .padding(Spacing.lg),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TierBadge(tier = tier, compact = true)
-                Spacer(Modifier.width(Spacing.sm))
-                Box(Modifier.weight(1f))
-                Text(
-                    text = "#${problem.contestId}${problem.problemIndex}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = onColor.copy(alpha = 0.8f),
-                )
-            }
-            Spacer(Modifier.size(Spacing.md))
-            Text(
-                text = displayName,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = onColor,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // 4dp tier accent bar on the left.
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(accent),
             )
-            Spacer(Modifier.size(Spacing.sm))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.TrendingUp,
-                    contentDescription = null,
-                    tint = onColor.copy(alpha = 0.9f),
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.width(Spacing.xs))
-                Text(
-                    text = "${problem.rating ?: "—"}",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = onColor.copy(alpha = 0.9f),
-                )
-            }
-            if (problem.tags.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.lg),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TierBadge(tier = tier, compact = true)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "#${problem.contestId}${problem.problemIndex}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Spacer(Modifier.size(Spacing.sm))
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.size(Spacing.sm))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(Spacing.xs))
+                    Text(
+                        text = "${problem.rating ?: "—"}",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                if (problem.tags.isNotEmpty()) {
+                    Spacer(Modifier.size(Spacing.sm))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        problem.tags.take(5).forEach { tag ->
+                            TagChip(tag = tag)
+                        }
+                    }
+                }
+                Spacer(Modifier.size(Spacing.md))
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    problem.tags.take(5).forEach { tag ->
-                        OnGradientTagChip(tag = tag, onColor = onColor)
+                    Button(
+                        onClick = onSolve,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .pressScale(0.96f),
+                    ) {
+                        Text("Solve", fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.width(Spacing.xs))
+                        Icon(
+                            imageVector = Icons.Default.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More actions",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Mark solved") },
+                                onClick = {
+                                    menuOpen = false
+                                    onMarkSolved()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Skip") },
+                                onClick = {
+                                    menuOpen = false
+                                    onSkip()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Close, contentDescription = null)
+                                },
+                            )
+                        }
                     }
                 }
             }
-            Box(modifier = Modifier.weight(1f, fill = true))
-            Spacer(Modifier.size(Spacing.md))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Button(
-                    onClick = onSolve,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Color.Black,
-                    ),
-                    modifier = Modifier.pressScale(0.96f),
-                ) {
-                    Text("Solve", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(Spacing.xs))
-                    Icon(
-                        imageVector = Icons.Default.OpenInNew,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-                OutlinedButton(
-                    onClick = onMarkSolved,
-                    modifier = Modifier.pressScale(0.96f),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = onColor,
-                    )
-                    Spacer(Modifier.width(Spacing.xs))
-                    Text("Solved", color = onColor)
-                }
-                Box(Modifier.weight(1f))
-                IconButton(onClick = onSkip) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Skip",
-                        tint = onColor,
-                    )
-                }
-            }
         }
     }
 }
 
-/**
- * A TagChip variant that reads well when rendered on top of a tier gradient.
- * Uses a semi-transparent surface tint instead of surfaceVariant for contrast.
- */
+private enum class TagSelectState { None, Include, Exclude }
+
 @Composable
-private fun OnGradientTagChip(tag: String, onColor: Color) {
+private fun ExcludableTagChip(
+    tag: String,
+    state: TagSelectState,
+    onClick: () -> Unit,
+) {
+    val bg = when (state) {
+        TagSelectState.None -> MaterialTheme.colorScheme.surfaceVariant
+        TagSelectState.Include -> MaterialTheme.colorScheme.primaryContainer
+        TagSelectState.Exclude -> MaterialTheme.colorScheme.errorContainer
+    }
+    val fg = when (state) {
+        TagSelectState.None -> MaterialTheme.colorScheme.onSurfaceVariant
+        TagSelectState.Include -> MaterialTheme.colorScheme.onPrimaryContainer
+        TagSelectState.Exclude -> MaterialTheme.colorScheme.onErrorContainer
+    }
+    val decoration = if (state == TagSelectState.Exclude) TextDecoration.LineThrough else TextDecoration.None
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
-        contentColor = onColor,
+        modifier = Modifier
+            .clip(AppShapes.small)
+            .background(Color.Transparent)
+            .pressScale(0.97f),
+        color = bg,
+        contentColor = fg,
         shape = AppShapes.small,
+        onClick = onClick,
     ) {
-        Row(
+        Text(
+            text = "#$tag",
+            style = MaterialTheme.typography.labelSmall,
+            color = fg,
+            textDecoration = decoration,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(tagAccent(tag)),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = "#$tag",
-                style = MaterialTheme.typography.labelSmall,
-                color = onColor,
-            )
-        }
+        )
     }
 }
 
-private fun tagAccent(tag: String): Color {
-    val goldenAngle = 137.508f
-    val hue = (kotlin.math.abs(tag.hashCode()) * goldenAngle) % 360f
-    return Color.hsl(hue, saturation = 0.6f, lightness = 0.7f)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun FilterSheet(
     current: Filters,
@@ -440,8 +477,8 @@ private fun FilterSheet(
     var count by remember { mutableStateOf(current.count.toFloat()) }
     var minRating by remember { mutableStateOf(current.minRating?.toString() ?: "") }
     var maxRating by remember { mutableStateOf(current.maxRating?.toString() ?: "") }
-    var includeTags by remember { mutableStateOf(current.includeTags.joinToString(", ")) }
-    var excludeTags by remember { mutableStateOf(current.excludeTags.joinToString(", ")) }
+    var includeTags by remember { mutableStateOf(current.includeTags.toSet()) }
+    var excludeTags by remember { mutableStateOf(current.excludeTags.toSet()) }
     var weakOnly by remember { mutableStateOf(current.weakOnly) }
 
     ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
@@ -504,22 +541,62 @@ private fun FilterSheet(
                     )
                 }
             }
-            OutlinedTextField(
-                value = includeTags,
-                onValueChange = { includeTags = it },
-                label = { Text("Include tags (comma-separated)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = AppShapes.medium,
-            )
-            OutlinedTextField(
-                value = excludeTags,
-                onValueChange = { excludeTags = it },
-                label = { Text("Exclude tags (comma-separated)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = AppShapes.medium,
-            )
+            // Include tags (chips)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text("Include any of", style = MaterialTheme.typography.titleSmall)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    KnownTags.forEach { tag ->
+                        val selState = when {
+                            includeTags.contains(tag) -> TagSelectState.Include
+                            else -> TagSelectState.None
+                        }
+                        ExcludableTagChip(
+                            tag = tag,
+                            state = selState,
+                            onClick = {
+                                includeTags = if (includeTags.contains(tag)) {
+                                    includeTags - tag
+                                } else {
+                                    excludeTags = excludeTags - tag
+                                    includeTags + tag
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+            // Exclude tags (chips)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text("Exclude", style = MaterialTheme.typography.titleSmall)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    KnownTags.forEach { tag ->
+                        val selState = when {
+                            excludeTags.contains(tag) -> TagSelectState.Exclude
+                            else -> TagSelectState.None
+                        }
+                        ExcludableTagChip(
+                            tag = tag,
+                            state = selState,
+                            onClick = {
+                                excludeTags = if (excludeTags.contains(tag)) {
+                                    excludeTags - tag
+                                } else {
+                                    includeTags = includeTags - tag
+                                    excludeTags + tag
+                                }
+                            },
+                        )
+                    }
+                }
+            }
             SwitchCardRow(
                 title = "Only weak tags",
                 subtitle = "Focus on topics you struggle with.",
@@ -540,8 +617,8 @@ private fun FilterSheet(
                                 count = count.toInt().coerceIn(1, 30),
                                 minRating = minRating.toIntOrNull(),
                                 maxRating = maxRating.toIntOrNull(),
-                                includeTags = includeTags.splitTags(),
-                                excludeTags = excludeTags.splitTags(),
+                                includeTags = includeTags,
+                                excludeTags = excludeTags,
                                 weakOnly = weakOnly,
                             ),
                         )
@@ -582,12 +659,6 @@ private fun SwitchCardRow(
         }
     }
 }
-
-private fun String.splitTags(): Set<String> =
-    split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-
-@Suppress("unused")
-private val UnusedBrush: Brush = Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
 
 @Preview(name = "Recommend - Loading (Dark)", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable

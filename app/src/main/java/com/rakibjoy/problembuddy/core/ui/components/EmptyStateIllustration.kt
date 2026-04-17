@@ -55,6 +55,7 @@ fun EmptyStateIllustration(
                 .background(radialBrush),
             contentAlignment = Alignment.Center,
         ) {
+            // decorative
             Icon(
                 imageVector = icon,
                 contentDescription = null,

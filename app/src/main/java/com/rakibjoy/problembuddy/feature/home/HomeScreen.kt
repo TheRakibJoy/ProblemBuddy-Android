@@ -52,6 +52,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -218,8 +220,20 @@ private fun buildSections(state: HomeState): List<Section> = buildList {
 
 @Composable
 private fun GreetingHeader(handle: String?, rating: Int?, tier: Tier, avatarUrl: String?) {
+    val greetingDescription = buildString {
+        append("Hello, ")
+        append(handle ?: "friend")
+        if (rating != null) {
+            append(". ")
+            append(tier.label)
+            append(", rating ")
+            append(rating)
+        }
+    }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = greetingDescription },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -321,6 +335,7 @@ private fun PrimaryCtaCard(
                     color = palette.onColor.copy(alpha = 0.85f * alpha),
                 )
             }
+            // decorative
             Icon(
                 imageVector = Icons.AutoMirrored.Default.ArrowForward,
                 contentDescription = null,
@@ -481,6 +496,7 @@ private fun QuickActionCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
+            // decorative
             Icon(
                 imageVector = icon,
                 contentDescription = null,
@@ -514,6 +530,7 @@ private fun FooterTip(tip: String) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
+            // decorative
             Icon(
                 imageVector = Icons.Default.Lightbulb,
                 contentDescription = null,

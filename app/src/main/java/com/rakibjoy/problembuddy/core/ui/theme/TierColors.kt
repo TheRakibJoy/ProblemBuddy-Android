@@ -1,8 +1,12 @@
 package com.rakibjoy.problembuddy.core.ui.theme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import com.rakibjoy.problembuddy.domain.model.Tier
+import kotlin.math.pow
 
 /**
  * Accent color pair for a given Codeforces [Tier].
@@ -19,8 +23,8 @@ data class TierPalette(
     val onColor: Color,
 )
 
-private val White = Color(0xFFFFFFFF)
-private val NearBlack = Color(0xFF0B0B10)
+internal val White = Color(0xFFFFFFFF)
+internal val NearBlack = Color(0xFF0B0B10)
 
 // Codeforces-inspired accents. `soft` is the darker/base shade, `strong` is the
 // brighter pop used as the gradient end. `onColor` is chosen for contrast
@@ -60,15 +64,19 @@ private val IntlMasterPalette = TierPalette(
     strong = Color(0xFFFB923C),
     onColor = NearBlack,
 )
+// Grandmaster #F87171: white-on-strong ~2.8:1 (fails AA), black-on-strong ~7.6:1.
+// Switched to NearBlack per review — the reds read cleaner on dark text.
 private val GrandmasterPalette = TierPalette(
     soft = Color(0xFFEF4444),
     strong = Color(0xFFF87171),
-    onColor = White,
+    onColor = NearBlack,
 )
+// Intl Grandmaster #EF4444: white-on-strong ~4.55:1 (borderline AA), black ~5.9:1.
+// Picking NearBlack for a stronger body-copy margin.
 private val IntlGrandmasterPalette = TierPalette(
     soft = Color(0xFFDC2626),
     strong = Color(0xFFEF4444),
-    onColor = White,
+    onColor = NearBlack,
 )
 private val LegendaryPalette = TierPalette(
     soft = Color(0xFF991B1B),
@@ -93,4 +101,39 @@ fun Tier.palette(): TierPalette = when (this) {
 fun Tier.gradient(): Brush {
     val p = palette()
     return Brush.linearGradient(colors = listOf(p.soft, p.strong))
+}
+
+/**
+ * Contrast-aware foreground color for text laid over a tier's [gradient]. Picks
+ * white or near-black based on the relative luminance of the brighter stop,
+ * targeting at least WCAG AA (4.5:1) for body copy.
+ *
+ * Note: individual [TierPalette.onColor] values are hand-tuned against each
+ * tier's accent and may differ from this threshold-based helper for borderline
+ * hues (e.g. the mid-luminance reds, where a pure 0.55 luminance cutoff would
+ * pick white but a direct contrast-ratio comparison prefers near-black).
+ */
+fun Tier.onGradient(): Color {
+    val p = palette()
+    return if (p.strong.luminance() > 0.55f) NearBlack else White
+}
+
+private fun Color.luminance(): Float {
+    // WCAG relative luminance approximation
+    fun chan(c: Float): Float = if (c <= 0.03928f) c / 12.92f else ((c + 0.055f) / 1.055f).pow(2.4f)
+    return 0.2126f * chan(red) + 0.7152f * chan(green) + 0.0722f * chan(blue)
+}
+
+/**
+ * Softer variant of [Tier.gradient] for use in full-bleed card backgrounds where
+ * text readability matters. Mixes both stops 70% toward the app surface color,
+ * keeping the tier hue while restoring contrast.
+ */
+@Composable
+fun Tier.mutedGradient(): Brush {
+    val p = palette()
+    val surface = MaterialTheme.colorScheme.surface
+    val soft = lerp(p.soft, surface, 0.35f)
+    val strong = lerp(p.strong, surface, 0.15f)
+    return Brush.linearGradient(listOf(soft, strong))
 }

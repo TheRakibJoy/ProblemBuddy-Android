@@ -101,7 +101,7 @@ fun OnboardingScreen(
                     .padding(horizontal = Spacing.xl),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.height(Spacing.xxxl))
+                Spacer(Modifier.height(Spacing.xl))
 
                 AnimatedVisibility(
                     visible = visible,
@@ -110,23 +110,23 @@ fun OnboardingScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         HeroOrb()
-                        Spacer(Modifier.height(Spacing.xl))
+                        Spacer(Modifier.height(Spacing.lg))
                         Text(
                             text = "Welcome to ProblemBuddy",
-                            style = MaterialTheme.typography.displaySmall.copy(
+                            style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                             ),
                             color = MaterialTheme.colorScheme.onBackground,
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.height(Spacing.sm))
+                        Spacer(Modifier.height(Spacing.xs))
                         Text(
                             text = "Your personal Codeforces coach.",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.height(Spacing.xxl))
+                        Spacer(Modifier.height(Spacing.lg))
 
                         OutlinedTextField(
                             value = state.handleInput,
@@ -135,6 +135,7 @@ fun OnboardingScreen(
                             singleLine = true,
                             shape = AppShapes.medium,
                             leadingIcon = {
+                                // decorative
                                 Icon(Icons.Default.Person, contentDescription = null)
                             },
                             isError = state.validation is HandleValidation.Invalid,
@@ -207,12 +208,13 @@ private fun HeroOrb() {
     )
     Box(
         modifier = Modifier
-            .size(120.dp)
+            .size(96.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(brush),
         contentAlignment = Alignment.Center,
     ) {
+        // decorative
         Icon(
             imageVector = Icons.Default.Bolt,
             contentDescription = null,
@@ -248,6 +250,7 @@ private fun ValidationRow(validation: HandleValidation) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
+                // decorative
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
@@ -266,6 +269,7 @@ private fun ValidationRow(validation: HandleValidation) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
+                // decorative
                 Icon(
                     imageVector = Icons.Default.Error,
                     contentDescription = null,

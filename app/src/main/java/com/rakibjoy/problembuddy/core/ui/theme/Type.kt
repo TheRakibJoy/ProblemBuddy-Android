@@ -23,21 +23,21 @@ val AppTypography: Typography = Typography(
     // ---- Display: big, tight, confident. Negative tracking + bold weight --
     displayLarge = TextStyle(
         fontFamily = DisplayFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
         letterSpacing = (-0.5).sp,
     ),
     displayMedium = TextStyle(
         fontFamily = DisplayFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
         letterSpacing = (-0.25).sp,
     ),
     displaySmall = TextStyle(
         fontFamily = DisplayFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         fontSize = 36.sp,
         lineHeight = 44.sp,
         letterSpacing = 0.sp,
@@ -46,21 +46,21 @@ val AppTypography: Typography = Typography(
     // ---- Headline: section headers ----------------------------------------
     headlineLarge = TextStyle(
         fontFamily = DisplayFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp,
     ),
     headlineMedium = TextStyle(
         fontFamily = DisplayFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
         letterSpacing = 0.sp,
     ),
     headlineSmall = TextStyle(
         fontFamily = DisplayFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
         letterSpacing = 0.sp,
@@ -70,7 +70,7 @@ val AppTypography: Typography = Typography(
     titleLarge = TextStyle(
         fontFamily = DisplayFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
+        fontSize = 22.sp,  // title sizes = weight 600
         lineHeight = 28.sp,
         letterSpacing = 0.sp,
     ),

@@ -136,7 +136,7 @@ fun TrainScreen(
                         shape = AppShapes.medium,
                     ) {
                         Text(
-                            text = if (state.startEnabled) "Start training ✨" else "Start training",
+                            text = "Start training",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                         )
                     }
@@ -176,6 +176,7 @@ private fun HeroCard() {
             .padding(Spacing.lg),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            // decorative
             Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = null,
@@ -184,7 +185,7 @@ private fun HeroCard() {
             )
             Text(
                 "Build your corpus",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = onColor,
             )
             Text(
@@ -209,7 +210,10 @@ private fun HandleField(
         label = { Text("Codeforces handle") },
         singleLine = true,
         isError = validation is HandleValidation.Invalid,
-        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+        leadingIcon = {
+            // decorative
+            Icon(Icons.Default.Person, contentDescription = null)
+        },
         shape = AppShapes.medium,
         supportingText = {
             AnimatedContent(
@@ -310,6 +314,7 @@ private fun ActiveJobCard(job: TrainingJob, onCancel: () -> Unit) {
                             .padding(Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // decorative
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
@@ -384,6 +389,7 @@ private fun SuccessBanner() {
             modifier = Modifier.padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // decorative
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,

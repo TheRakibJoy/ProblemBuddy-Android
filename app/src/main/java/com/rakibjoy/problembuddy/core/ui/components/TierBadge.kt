@@ -43,7 +43,7 @@ fun TierBadge(
         ) {
             Text(
                 text = text,
-                style = style.copy(fontWeight = FontWeight.SemiBold),
+                style = style.copy(fontWeight = FontWeight.Medium),
                 color = palette.onColor,
             )
         }

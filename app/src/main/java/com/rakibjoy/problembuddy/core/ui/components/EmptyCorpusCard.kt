@@ -1,5 +1,6 @@
 package com.rakibjoy.problembuddy.core.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -11,8 +12,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
-import com.rakibjoy.problembuddy.core.ui.theme.Elevations
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
 import com.rakibjoy.problembuddy.core.ui.theme.Spacing
 
@@ -28,11 +29,11 @@ fun EmptyCorpusCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = AppShapes.medium,
+        shape = AppShapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.hover),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         EmptyStateIllustration(
             icon = Icons.Default.CloudOff,
