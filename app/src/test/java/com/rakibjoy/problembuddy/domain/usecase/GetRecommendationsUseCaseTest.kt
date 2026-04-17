@@ -35,26 +35,26 @@ class GetRecommendationsUseCaseTest {
     private lateinit var useCase: GetRecommendationsUseCase
 
     private val handle = "tester"
-    private val expertTier = "expert"
+    private val specialistTier = "specialist"
 
-    // 8 expert entities. Ratings in [1400, 1600). Some already solved; one with
+    // 8 specialist entities. Ratings in [1400, 1600). Some already solved; one with
     // "ds" tag to be excluded; one marked "hidden" via interaction.
     private val entities = listOf(
-        ProblemEntity(id = 1, tier = expertTier, contestId = 100, problemIndex = "A", rating = 1400, tags = "dp,graphs"),
-        ProblemEntity(id = 2, tier = expertTier, contestId = 100, problemIndex = "B", rating = 1500, tags = "dp,math"),
-        ProblemEntity(id = 3, tier = expertTier, contestId = 101, problemIndex = "A", rating = 1500, tags = "graphs"),
-        ProblemEntity(id = 4, tier = expertTier, contestId = 101, problemIndex = "B", rating = 1450, tags = "dp,ds"), // excluded tag
-        ProblemEntity(id = 5, tier = expertTier, contestId = 102, problemIndex = "A", rating = 1500, tags = "dp"), // solved
-        ProblemEntity(id = 6, tier = expertTier, contestId = 102, problemIndex = "B", rating = 1550, tags = "graphs,math"), // solved
-        ProblemEntity(id = 7, tier = expertTier, contestId = 103, problemIndex = "A", rating = 1500, tags = "dp,graphs"), // hidden
-        ProblemEntity(id = 8, tier = expertTier, contestId = 104, problemIndex = "A", rating = 1420, tags = "graphs,math"),
+        ProblemEntity(id = 1, tier = specialistTier, contestId = 100, problemIndex = "A", rating = 1400, tags = "dp,graphs"),
+        ProblemEntity(id = 2, tier = specialistTier, contestId = 100, problemIndex = "B", rating = 1500, tags = "dp,math"),
+        ProblemEntity(id = 3, tier = specialistTier, contestId = 101, problemIndex = "A", rating = 1500, tags = "graphs"),
+        ProblemEntity(id = 4, tier = specialistTier, contestId = 101, problemIndex = "B", rating = 1450, tags = "dp,ds"), // excluded tag
+        ProblemEntity(id = 5, tier = specialistTier, contestId = 102, problemIndex = "A", rating = 1500, tags = "dp"), // solved
+        ProblemEntity(id = 6, tier = specialistTier, contestId = 102, problemIndex = "B", rating = 1550, tags = "graphs,math"), // solved
+        ProblemEntity(id = 7, tier = specialistTier, contestId = 103, problemIndex = "A", rating = 1500, tags = "dp,graphs"), // hidden
+        ProblemEntity(id = 8, tier = specialistTier, contestId = 104, problemIndex = "A", rating = 1420, tags = "graphs,math"),
     )
 
     private val counters = listOf(
-        CounterEntity(id = 1, tagName = "dp", tier = expertTier, count = 50),
-        CounterEntity(id = 2, tagName = "graphs", tier = expertTier, count = 40),
-        CounterEntity(id = 3, tagName = "math", tier = expertTier, count = 20),
-        CounterEntity(id = 4, tagName = "ds", tier = expertTier, count = 15),
+        CounterEntity(id = 1, tagName = "dp", tier = specialistTier, count = 50),
+        CounterEntity(id = 2, tagName = "graphs", tier = specialistTier, count = 40),
+        CounterEntity(id = 3, tagName = "math", tier = specialistTier, count = 20),
+        CounterEntity(id = 4, tagName = "ds", tier = specialistTier, count = 15),
     )
 
     @BeforeEach
@@ -132,8 +132,8 @@ class GetRecommendationsUseCaseTest {
                 fetchedAt = 0L,
             ),
         )
-        coEvery { counterDao.getByTier(expertTier) } returns counters
-        every { problemDao.observeByTier(expertTier) } returns flowOf(entities)
+        coEvery { counterDao.getByTier(specialistTier) } returns counters
+        every { problemDao.observeByTier(specialistTier) } returns flowOf(entities)
         every { interactionDao.observeAll() } returns flowOf(
             listOf(
                 InteractionEntity(id = 1, problemId = 7L, status = "hidden", createdAt = 0L),

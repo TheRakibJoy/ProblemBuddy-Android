@@ -6,4 +6,6 @@ data class UserInfo(
     val maxRating: Int?,
     val rank: String?,
     val maxRank: String?,
+    val avatarUrl: String? = null,
+    val titlePhotoUrl: String? = null,
 )

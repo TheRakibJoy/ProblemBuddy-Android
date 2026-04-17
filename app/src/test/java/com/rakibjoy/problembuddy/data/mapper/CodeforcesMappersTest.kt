@@ -36,6 +36,26 @@ class CodeforcesMappersTest {
         assertNull(domain.maxRating)
         assertNull(domain.rank)
         assertNull(domain.maxRank)
+        assertNull(domain.avatarUrl)
+        assertNull(domain.titlePhotoUrl)
+    }
+
+    @Test
+    fun `UserInfoDto protocol-relative avatar URLs get https prefix`() {
+        val dto = UserInfoDto(
+            handle = "tourist",
+            avatar = "//userpic.codeforces.org/no-avatar.jpg",
+            titlePhoto = "//userpic.codeforces.org/tourist/title/x.jpg",
+        )
+        val domain = dto.toDomain()
+        assertEquals("https://userpic.codeforces.org/no-avatar.jpg", domain.avatarUrl)
+        assertEquals("https://userpic.codeforces.org/tourist/title/x.jpg", domain.titlePhotoUrl)
+    }
+
+    @Test
+    fun `UserInfoDto http avatar URLs upgraded to https`() {
+        val dto = UserInfoDto(handle = "h", avatar = "http://example.com/a.jpg")
+        assertEquals("https://example.com/a.jpg", dto.toDomain().avatarUrl)
     }
 
     @Test

@@ -107,6 +107,7 @@ class ProfileViewModel @Inject constructor(
                     maxRating = maxRating,
                     currentTier = tier,
                     weakTags = weakTags,
+                    avatarUrl = userInfo.titlePhotoUrl ?: userInfo.avatarUrl,
                     error = null,
                     stale = stale,
                     fetchedAtMillis = fetchedAt,

@@ -46,6 +46,7 @@ import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
+import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import com.rakibjoy.problembuddy.core.ui.components.SectionHeader
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonCard
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonLine
@@ -169,6 +170,7 @@ private fun ProfileContent(
                 rating = state.rating,
                 maxRating = state.maxRating,
                 currentTier = state.currentTier,
+                avatarUrl = state.avatarUrl,
             )
         }
         item {
@@ -223,6 +225,7 @@ private fun HeroCard(
     rating: Int?,
     maxRating: Int?,
     currentTier: Tier?,
+    avatarUrl: String?,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
@@ -242,19 +245,12 @@ private fun HeroCard(
                 .padding(Spacing.xl),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.25f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = (handle?.firstOrNull()?.uppercase() ?: "?"),
-                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                    color = onColor,
-                )
-            }
+            HandleAvatar(
+                handle = handle,
+                avatarUrl = avatarUrl,
+                tier = currentTier,
+                size = 80.dp,
+            )
             Spacer(Modifier.width(Spacing.lg))
             Column(
                 modifier = Modifier.weight(1f),

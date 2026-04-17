@@ -12,6 +12,8 @@ data class UserInfoPersisted(
     val maxRating: Int? = null,
     val rank: String? = null,
     val maxRank: String? = null,
+    val avatarUrl: String? = null,
+    val titlePhotoUrl: String? = null,
 )
 
 @Serializable
@@ -38,6 +40,8 @@ fun UserInfo.toPersisted(): UserInfoPersisted =
         maxRating = maxRating,
         rank = rank,
         maxRank = maxRank,
+        avatarUrl = avatarUrl,
+        titlePhotoUrl = titlePhotoUrl,
     )
 
 fun UserInfoPersisted.toDomain(): UserInfo =
@@ -47,6 +51,8 @@ fun UserInfoPersisted.toDomain(): UserInfo =
         maxRating = maxRating,
         rank = rank,
         maxRank = maxRank,
+        avatarUrl = avatarUrl,
+        titlePhotoUrl = titlePhotoUrl,
     )
 
 fun Problem.toPersisted(): ProblemPersisted =

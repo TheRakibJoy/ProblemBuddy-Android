@@ -114,6 +114,9 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // Image loading
+    implementation(libs.coil.compose)
+
     // Unit tests — JUnit 5
     testImplementation(libs.junit.jupiter.api)
     testImplementation(libs.junit.jupiter.params)

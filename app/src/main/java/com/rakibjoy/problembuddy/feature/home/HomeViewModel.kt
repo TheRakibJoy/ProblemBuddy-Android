@@ -91,7 +91,11 @@ class HomeViewModel @Inject constructor(
             codeforces.userInfo(handle).onSuccess { info ->
                 _state.update {
                     if (it.handle == handle) {
-                        it.copy(rating = info.rating, maxRating = info.maxRating)
+                        it.copy(
+                            rating = info.rating,
+                            maxRating = info.maxRating,
+                            avatarUrl = info.titlePhotoUrl ?: info.avatarUrl,
+                        )
                     } else it
                 }
             }

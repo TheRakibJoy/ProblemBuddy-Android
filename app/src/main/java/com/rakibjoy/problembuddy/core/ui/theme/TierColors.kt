@@ -25,6 +25,11 @@ private val NearBlack = Color(0xFF0B0B10)
 // Codeforces-inspired accents. `soft` is the darker/base shade, `strong` is the
 // brighter pop used as the gradient end. `onColor` is chosen for contrast
 // against `strong` (the higher-luminance stop).
+private val NewbiePalette = TierPalette(
+    soft = Color(0xFF6B7280),
+    strong = Color(0xFF9CA3AF),
+    onColor = NearBlack,
+)
 private val PupilPalette = TierPalette(
     soft = Color(0xFF10B981),
     strong = Color(0xFF34D399),
@@ -72,6 +77,7 @@ private val LegendaryPalette = TierPalette(
 )
 
 fun Tier.palette(): TierPalette = when (this) {
+    Tier.NEWBIE -> NewbiePalette
     Tier.PUPIL -> PupilPalette
     Tier.SPECIALIST -> SpecialistPalette
     Tier.EXPERT -> ExpertPalette

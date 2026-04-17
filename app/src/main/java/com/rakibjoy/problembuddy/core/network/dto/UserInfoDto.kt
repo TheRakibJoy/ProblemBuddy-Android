@@ -9,4 +9,6 @@ data class UserInfoDto(
     val maxRating: Int? = null,
     val rank: String? = null,
     val maxRank: String? = null,
+    val avatar: String? = null,
+    val titlePhoto: String? = null,
 )

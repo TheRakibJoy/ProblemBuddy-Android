@@ -15,7 +15,15 @@ fun UserInfoDto.toDomain(): UserInfo = UserInfo(
     maxRating = maxRating,
     rank = rank,
     maxRank = maxRank,
+    avatarUrl = avatar?.ensureHttps(),
+    titlePhotoUrl = titlePhoto?.ensureHttps(),
 )
+
+private fun String.ensureHttps(): String = when {
+    startsWith("//") -> "https:$this"
+    startsWith("http://") -> "https://" + removePrefix("http://")
+    else -> this
+}
 
 fun RatingChangeDto.toDomain(): RatingChange = RatingChange(
     contestId = contestId,

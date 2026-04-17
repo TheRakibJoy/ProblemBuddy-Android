@@ -9,6 +9,7 @@ data class ProfileState(
     val maxRating: Int? = null,
     val currentTier: Tier? = null,
     val weakTags: List<WeakTagStat> = emptyList(),
+    val avatarUrl: String? = null,
     val error: String? = null,
     val stale: Boolean = false,
     val fetchedAtMillis: Long? = null,

@@ -230,4 +230,7 @@ House rules (from `Implementation Plan.md` §8):
 
 ## License
 
-See [`LICENSE`](LICENSE).
+[**PolyForm Noncommercial 1.0.0**](https://polyformproject.org/licenses/noncommercial/1.0.0/)
+— free to use, modify, and share for personal, academic, research, and other
+**noncommercial** purposes. Commercial use is not permitted without a separate
+licence agreement from the author. See [`LICENSE`](LICENSE) for the full text.

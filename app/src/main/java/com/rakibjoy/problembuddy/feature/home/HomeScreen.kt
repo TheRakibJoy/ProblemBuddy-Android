@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lightbulb
@@ -159,6 +160,7 @@ fun HomeScreen(
                                     handle = state.handle,
                                     rating = state.rating,
                                     tier = tier,
+                                    avatarUrl = state.avatarUrl,
                                 )
                                 Section.Stats -> StatsRow(
                                     rating = state.rating ?: 0,
@@ -215,7 +217,7 @@ private fun buildSections(state: HomeState): List<Section> = buildList {
 }
 
 @Composable
-private fun GreetingHeader(handle: String?, rating: Int?, tier: Tier) {
+private fun GreetingHeader(handle: String?, rating: Int?, tier: Tier, avatarUrl: String?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -236,21 +238,12 @@ private fun GreetingHeader(handle: String?, rating: Int?, tier: Tier) {
         }
         val palette = tier.palette()
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(tier.gradient()),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = (handle?.firstOrNull()?.uppercase() ?: "?"),
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    color = palette.onColor,
-                )
-            }
+            HandleAvatar(
+                handle = handle,
+                avatarUrl = avatarUrl,
+                tier = tier,
+                size = 64.dp,
+            )
             if (rating != null) {
                 Spacer(Modifier.height(Spacing.xs))
                 Text(
