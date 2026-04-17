@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.rakibjoy.problembuddy.domain.model.ThemeMode
 
 private val DarkColors = darkColorScheme(
     primary = Purple80,
@@ -24,7 +25,12 @@ private val LightColors = lightColorScheme(
 
 @Composable
 fun ProblemBuddyTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    darkTheme: Boolean = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    },
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {

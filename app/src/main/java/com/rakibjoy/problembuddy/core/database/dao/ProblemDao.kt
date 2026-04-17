@@ -18,6 +18,9 @@ interface ProblemDao {
     @Query("SELECT COUNT(*) FROM problems WHERE tier = :tier")
     suspend fun countByTier(tier: String): Int
 
+    @Query("SELECT id FROM problems WHERE contestId = :contestId AND problemIndex = :problemIndex LIMIT 1")
+    suspend fun findId(contestId: Int, problemIndex: String): Long?
+
     @Query("DELETE FROM problems")
     suspend fun deleteAll()
 }

@@ -1,0 +1,15 @@
+package com.rakibjoy.problembuddy.feature.settings
+
+import com.rakibjoy.problembuddy.domain.model.ThemeMode
+
+sealed interface SettingsIntent {
+    data class SetTheme(val mode: ThemeMode) : SettingsIntent
+    data class SetRecsPerLoad(val value: Int) : SettingsIntent
+    data class SetDifficultyOffset(val value: Int) : SettingsIntent
+    data object RequestResetCorpus : SettingsIntent
+    data object ConfirmResetCorpus : SettingsIntent
+    data object DismissResetCorpusConfirm : SettingsIntent
+    data object RequestDeleteAll : SettingsIntent
+    data object ConfirmDeleteAll : SettingsIntent
+    data object DismissDeleteAllConfirm : SettingsIntent
+}
