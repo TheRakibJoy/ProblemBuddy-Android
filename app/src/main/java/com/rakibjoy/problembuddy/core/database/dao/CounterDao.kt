@@ -16,4 +16,7 @@ interface CounterDao {
 
     @Query("SELECT * FROM counters WHERE tier = :tier")
     fun observeByTier(tier: String): Flow<List<CounterEntity>>
+
+    @Query("SELECT * FROM counters WHERE tier = :tier")
+    suspend fun getByTier(tier: String): List<CounterEntity>
 }
