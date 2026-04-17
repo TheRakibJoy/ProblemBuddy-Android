@@ -94,7 +94,9 @@ class RecommendScreenTest {
             )
         }
 
-        composeRule.onNodeWithText("Mark Solved").performClick()
+        // Mark solved now lives inside an overflow dropdown — open it first.
+        composeRule.onNodeWithContentDescription("More actions").performClick()
+        composeRule.onNodeWithText("Mark solved").performClick()
 
         val markSolved = received.filterIsInstance<RecommendIntent.MarkSolved>()
         assertEquals(1, markSolved.size)
