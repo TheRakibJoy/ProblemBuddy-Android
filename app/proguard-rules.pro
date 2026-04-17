@@ -1,21 +1,45 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Preserve stack trace file/line info; rename the source file attribute.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep annotation info used by Retrofit, Hilt, Room, and kotlinx.serialization.
+-keepattributes *Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations,RuntimeVisibleParameterAnnotations,AnnotationDefault
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ---------- kotlinx.serialization ----------
+# Keep every generated $$serializer plus the companion `serializer()` entry points
+# inside this app's packages. Library serializers ship their own consumer rules.
+-keep,includedescriptorclasses class com.rakibjoy.problembuddy.**$$serializer { *; }
+-keepclassmembers class com.rakibjoy.problembuddy.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.rakibjoy.problembuddy.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep @Serializable DTOs and cache models intact (field names drive JSON keys).
+-keep @kotlinx.serialization.Serializable class com.rakibjoy.problembuddy.core.network.dto.** { *; }
+-keep @kotlinx.serialization.Serializable class com.rakibjoy.problembuddy.data.cache.** { *; }
+
+# ---------- Retrofit (R8 full mode) ----------
+# Retrofit builds proxies at runtime; keep service interfaces and response generics.
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface <1>
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
+# ---------- OkHttp / Okio ----------
+-dontwarn okhttp3.internal.platform.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**
+
+# ---------- Coroutines ----------
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-dontwarn kotlinx.coroutines.debug.**
+
+# ---------- WorkManager / Hilt Worker ----------
+# Hilt auto-generates @AssistedInject factories; keep the worker so it's reachable by name.
+-keep class com.rakibjoy.problembuddy.core.work.IngestWorker { *; }

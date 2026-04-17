@@ -1,0 +1,227 @@
+package com.rakibjoy.problembuddy
+
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.rakibjoy.problembuddy.core.ui.theme.Elevations
+import com.rakibjoy.problembuddy.feature.home.HomeScreen
+import com.rakibjoy.problembuddy.feature.onboarding.OnboardingScreen
+import com.rakibjoy.problembuddy.feature.profile.ProfileScreen
+import com.rakibjoy.problembuddy.feature.recommend.RecommendScreen
+import com.rakibjoy.problembuddy.feature.settings.SettingsScreen
+import com.rakibjoy.problembuddy.feature.train.TrainScreen
+import kotlinx.serialization.Serializable
+
+@Serializable
+object Onboarding
+
+@Serializable
+object Home
+
+@Serializable
+object Recommend
+
+@Serializable
+object Train
+
+@Serializable
+object Profile
+
+@Serializable
+object Settings
+
+private data class BottomBarItem(
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    val route: Any,
+    val matches: (NavDestination?) -> Boolean,
+)
+
+private val bottomBarItems = listOf(
+    BottomBarItem("Home", Icons.Default.Home, Icons.Outlined.Home, Home) { it?.hasRoute(Home::class) == true },
+    BottomBarItem("Recommend", Icons.Default.AutoAwesome, Icons.Outlined.AutoAwesome, Recommend) { it?.hasRoute(Recommend::class) == true },
+    BottomBarItem("Profile", Icons.Default.Person, Icons.Outlined.Person, Profile) { it?.hasRoute(Profile::class) == true },
+    BottomBarItem("Settings", Icons.Default.Settings, Icons.Outlined.Settings, Settings) { it?.hasRoute(Settings::class) == true },
+)
+
+private fun shouldShowBottomBar(destination: NavDestination?): Boolean {
+    if (destination == null) return false
+    return bottomBarItems.any { it.matches(destination) }
+}
+
+// Shared motion specs for NavHost destinations.
+private const val ENTER_MS = 300
+private const val EXIT_MS = 200
+
+@Composable
+fun ProblemBuddyNavHost(
+    startDestination: Any,
+    navController: NavHostController = rememberNavController(),
+) {
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = backStackEntry?.destination
+    val haptics = LocalHapticFeedback.current
+
+    Scaffold(
+        bottomBar = {
+            if (shouldShowBottomBar(currentDestination)) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    tonalElevation = Elevations.hover,
+                ) {
+                    bottomBarItems.forEach { item ->
+                        val selected = item.matches(currentDestination)
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = item.label,
+                                )
+                            },
+                            label = { Text(item.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
+                        )
+                    }
+                }
+            }
+        },
+    ) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.padding(padding),
+        ) {
+            composable<Onboarding>(
+                enterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                exitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                popEnterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.End, tween(ENTER_MS)) },
+                popExitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.End, tween(ENTER_MS)) },
+            ) {
+                OnboardingScreen(
+                    onNavigateToHome = {
+                        navController.navigate(Home) {
+                            popUpTo(Onboarding) { inclusive = true }
+                        }
+                    },
+                )
+            }
+            composable<Home>(
+                enterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                exitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                popEnterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.End, tween(ENTER_MS)) },
+                popExitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.End, tween(ENTER_MS)) },
+            ) {
+                HomeScreen(
+                    onNavigateToRecommend = {
+                        navController.navigate(Recommend) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToTrain = { navController.navigate(Train) },
+                    onNavigateToProfile = {
+                        navController.navigate(Profile) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Settings) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+            composable<Recommend>(
+                enterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                exitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                popEnterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.End, tween(ENTER_MS)) },
+                popExitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.End, tween(ENTER_MS)) },
+            ) {
+                RecommendScreen(
+                    onNavigateToTrain = { navController.navigate(Train) },
+                )
+            }
+            composable<Train>(
+                enterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                exitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                popEnterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.End, tween(ENTER_MS)) },
+                popExitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.End, tween(ENTER_MS)) },
+            ) { TrainScreen() }
+            composable<Profile>(
+                enterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                exitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                popEnterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.End, tween(ENTER_MS)) },
+                popExitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.End, tween(ENTER_MS)) },
+            ) {
+                ProfileScreen(
+                    onNavigateToTrain = { navController.navigate(Train) },
+                )
+            }
+            composable<Settings>(
+                enterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                exitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.Start, tween(ENTER_MS)) },
+                popEnterTransition = { fadeIn(tween(ENTER_MS)) + slideIntoContainer(SlideDirection.End, tween(ENTER_MS)) },
+                popExitTransition = { fadeOut(tween(EXIT_MS)) + slideOutOfContainer(SlideDirection.End, tween(ENTER_MS)) },
+            ) {
+                SettingsScreen(
+                    onNavigateToOnboarding = {
+                        navController.navigate(Onboarding) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
