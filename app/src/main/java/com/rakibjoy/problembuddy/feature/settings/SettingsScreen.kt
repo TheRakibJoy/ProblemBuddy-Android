@@ -1,5 +1,7 @@
 package com.rakibjoy.problembuddy.feature.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
@@ -394,6 +397,22 @@ private fun AboutGroup() {
     val context = LocalContext.current
     SettingsGroup(title = "ABOUT") {
         SettingsRow(
+            icon = Icons.Outlined.Favorite,
+            title = "Made by RakibJoy",
+            subtitle = "Idea, algorithms, and original web app",
+            trailing = {
+                TextButton(onClick = {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://codeforces.com/profile/RakibJoy"),
+                    )
+                    runCatching { context.startActivity(intent) }
+                }) {
+                    Text("CF")
+                }
+            },
+        )
+        SettingsRow(
             icon = Icons.Outlined.Info,
             title = "Version",
             trailing = {
@@ -413,11 +432,11 @@ private fun AboutGroup() {
                 subtitle = "TheRakibJoy/ProblemBuddy-Android",
                 trailing = {
                     TextButton(onClick = {
-                        Toast.makeText(
-                            context,
-                            "Opening soon",
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://github.com/TheRakibJoy/ProblemBuddy-Android"),
+                        )
+                        runCatching { context.startActivity(intent) }
                     }) {
                         Text("Open")
                     }

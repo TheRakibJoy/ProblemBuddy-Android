@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
+import com.rakibjoy.problembuddy.core.ui.components.HandleText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lightbulb
@@ -242,13 +243,22 @@ private fun GreetingHeader(handle: String?, rating: Int?, tier: Tier, avatarUrl:
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                text = handle ?: "friend",
-                style = MaterialTheme.typography.displaySmall.copy(
+            if (handle != null) {
+                HandleText(
+                    handle = handle,
+                    tier = tier,
+                    style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-            )
+                )
+            } else {
+                Text(
+                    text = "friend",
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
         }
         val palette = tier.palette()
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

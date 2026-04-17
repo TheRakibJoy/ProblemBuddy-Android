@@ -43,7 +43,12 @@ fun HandleAvatar(
     val initial = handle?.trim()?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     val fallbackBrush: Brush = tier?.gradient()
         ?: Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
-    val fallbackTextColor = tier?.palette()?.onColor ?: Color.White
+    // Codeforces convention: Legendary Grandmaster handles render their first
+    // character in black. Honor it here for the single-letter avatar fallback.
+    val fallbackTextColor = when {
+        tier == Tier.LEGENDARY -> Color.Black
+        else -> tier?.palette()?.onColor ?: Color.White
+    }
 
     var loadFailed by remember(avatarUrl) { mutableStateOf(false) }
 

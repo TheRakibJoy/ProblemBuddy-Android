@@ -52,6 +52,7 @@ import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
+import com.rakibjoy.problembuddy.core.ui.components.HandleText
 import com.rakibjoy.problembuddy.core.ui.components.SectionHeader
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonCard
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonLine
@@ -278,11 +279,21 @@ private fun HeroCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                Text(
-                    text = handle ?: "—",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = onColor,
-                )
+                if (handle != null && currentTier != null) {
+                    HandleText(
+                        handle = handle,
+                        tier = currentTier,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        baseColor = onColor,
+                    )
+                } else {
+                    Text(
+                        text = handle ?: "—",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = onColor,
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (currentTier != null) {
                         TierBadge(tier = currentTier, compact = false)
