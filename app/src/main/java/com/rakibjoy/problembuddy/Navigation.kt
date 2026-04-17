@@ -141,9 +141,17 @@ fun ProblemBuddyNavHost(
                     },
                 )
             }
-            composable<Recommend> { RecommendScreen() }
+            composable<Recommend> {
+                RecommendScreen(
+                    onNavigateToTrain = { navController.navigate(Train) },
+                )
+            }
             composable<Train> { TrainScreen() }
-            composable<Profile> { ProfileScreen() }
+            composable<Profile> {
+                ProfileScreen(
+                    onNavigateToTrain = { navController.navigate(Train) },
+                )
+            }
             composable<Settings> {
                 SettingsScreen(
                     onNavigateToOnboarding = {

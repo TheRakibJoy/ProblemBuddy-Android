@@ -52,8 +52,8 @@ class ProfileViewModel @Inject constructor(
                     return@launch
                 }
 
-                val userInfoResult = codeforces.userInfo(handle)
-                val userInfo = userInfoResult.getOrElse { e ->
+                val userInfoResult = codeforces.userInfoWithFallback(handle)
+                val userInfoFresh = userInfoResult.getOrElse { e ->
                     _state.value = ProfileState(
                         loading = false,
                         handle = handle,
@@ -61,12 +61,19 @@ class ProfileViewModel @Inject constructor(
                     )
                     return@launch
                 }
+                val userInfo = userInfoFresh.value
 
                 val rating = userInfo.rating
                 val maxRating = userInfo.maxRating
                 val tier = Tier.forMaxRating(maxRating ?: rating ?: 0)
 
-                val submissions = codeforces.userStatus(handle, 1, 100000).getOrNull().orEmpty()
+                val submissionsFresh = codeforces.userStatusWithFallback(handle, 1, 100000).getOrNull()
+                val submissions = submissionsFresh?.value.orEmpty()
+                val stale = userInfoFresh.stale || (submissionsFresh?.stale ?: false)
+                val fetchedAt = maxOf(
+                    userInfoFresh.fetchedAt,
+                    submissionsFresh?.fetchedAt ?: userInfoFresh.fetchedAt,
+                )
                 val solvedTagCounts: Map<String, Int> = submissions.asSequence()
                     .filter { it.verdict == "OK" }
                     .filter { sub ->
@@ -101,6 +108,8 @@ class ProfileViewModel @Inject constructor(
                     currentTier = tier,
                     weakTags = weakTags,
                     error = null,
+                    stale = stale,
+                    fetchedAtMillis = fetchedAt,
                 )
             } catch (t: Throwable) {
                 _state.value = _state.value.copy(

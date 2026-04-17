@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.model.TrainingJob
 
@@ -80,6 +81,12 @@ fun HomeScreen(
                 maxRating = state.maxRating,
                 onProfileClick = { onIntent(HomeIntent.ProfileClicked) },
             )
+
+            if (state.handle != null && !state.hasCorpus) {
+                EmptyCorpusCard(
+                    onTrainClicked = { onIntent(HomeIntent.TrainClicked) },
+                )
+            }
 
             Button(
                 onClick = { onIntent(HomeIntent.RecommendClicked) },

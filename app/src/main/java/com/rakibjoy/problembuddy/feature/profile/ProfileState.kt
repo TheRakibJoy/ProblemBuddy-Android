@@ -10,6 +10,8 @@ data class ProfileState(
     val currentTier: Tier? = null,
     val weakTags: List<WeakTagStat> = emptyList(),
     val error: String? = null,
+    val stale: Boolean = false,
+    val fetchedAtMillis: Long? = null,
 )
 
 data class WeakTagStat(val tag: String, val coverage: Float)

@@ -2,6 +2,7 @@ package com.rakibjoy.problembuddy.core.database
 
 import android.content.Context
 import androidx.room.Room
+import com.rakibjoy.problembuddy.core.database.dao.CachedPayloadDao
 import com.rakibjoy.problembuddy.core.database.dao.CounterDao
 import com.rakibjoy.problembuddy.core.database.dao.HandleDao
 import com.rakibjoy.problembuddy.core.database.dao.InteractionDao
@@ -48,4 +49,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideTrainingJobDao(db: ProblemBuddyDatabase): TrainingJobDao = db.trainingJobDao()
+
+    @Provides
+    @Singleton
+    fun provideCachedPayloadDao(db: ProblemBuddyDatabase): CachedPayloadDao = db.cachedPayloadDao()
 }

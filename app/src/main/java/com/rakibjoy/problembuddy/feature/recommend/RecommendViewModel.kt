@@ -7,6 +7,7 @@ import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
 import com.rakibjoy.problembuddy.core.database.entity.InteractionEntity
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.domain.model.Problem
+import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.usecase.GetRecommendationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -37,7 +38,15 @@ class RecommendViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val recsPerLoad = runCatching { settingsStore.recsPerLoad.first() }.getOrDefault(10)
-            _state.update { it.copy(filters = it.filters.copy(count = recsPerLoad)) }
+            val hasCorpus = runCatching {
+                Tier.entries.sumOf { problemDao.countByTier(it.name.lowercase()) } > 0
+            }.getOrDefault(true)
+            _state.update {
+                it.copy(
+                    filters = it.filters.copy(count = recsPerLoad),
+                    hasCorpus = hasCorpus,
+                )
+            }
             refresh()
         }
     }
@@ -71,8 +80,15 @@ class RecommendViewModel @Inject constructor(
     private suspend fun refresh() {
         _state.update { it.copy(loading = true, error = null) }
         getRecommendations(_state.value.filters).fold(
-            onSuccess = { problems ->
-                _state.update { it.copy(loading = false, problems = problems, error = null) }
+            onSuccess = { result ->
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        problems = result.problems,
+                        stale = result.stale,
+                        error = null,
+                    )
+                }
             },
             onFailure = { e ->
                 _state.update { it.copy(loading = false, error = e.message) }

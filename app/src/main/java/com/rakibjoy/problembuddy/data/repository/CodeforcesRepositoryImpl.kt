@@ -1,15 +1,24 @@
 package com.rakibjoy.problembuddy.data.repository
 
+import com.rakibjoy.problembuddy.core.database.dao.CachedPayloadDao
+import com.rakibjoy.problembuddy.core.database.entity.CachedPayloadEntity
 import com.rakibjoy.problembuddy.core.network.CodeforcesApi
 import com.rakibjoy.problembuddy.core.network.dto.CfEnvelope
+import com.rakibjoy.problembuddy.data.cache.SubmissionPersisted
+import com.rakibjoy.problembuddy.data.cache.UserInfoPersisted
+import com.rakibjoy.problembuddy.data.cache.toDomain
+import com.rakibjoy.problembuddy.data.cache.toPersisted
 import com.rakibjoy.problembuddy.data.mapper.toDomain
 import com.rakibjoy.problembuddy.domain.model.CodeforcesException
+import com.rakibjoy.problembuddy.domain.model.Fresh
 import com.rakibjoy.problembuddy.domain.model.RatingChange
 import com.rakibjoy.problembuddy.domain.model.Submission
 import com.rakibjoy.problembuddy.domain.model.UserInfo
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -19,6 +28,8 @@ import javax.inject.Singleton
 @Singleton
 class CodeforcesRepositoryImpl @Inject constructor(
     private val api: CodeforcesApi,
+    private val cachedPayloadDao: CachedPayloadDao,
+    private val json: Json,
 ) : CodeforcesRepository {
 
     private data class CacheEntry<T>(val value: T, val expiresAt: Long)
@@ -61,6 +72,88 @@ class CodeforcesRepositoryImpl @Inject constructor(
     ): Result<List<Submission>> =
         fetch("userStatus:$handle:$from:$count") {
             api.userStatus(handle, from, count).resolveOk().map { it.toDomain() }
+        }
+
+    override suspend fun userInfoWithFallback(handle: String): Result<Fresh<UserInfo>> {
+        val key = "userInfo:$handle"
+        val live = userInfo(handle)
+        return live.fold(
+            onSuccess = { info ->
+                val now = System.currentTimeMillis()
+                persistPayload(key, json.encodeToString(UserInfoPersisted.serializer(), info.toPersisted()), now)
+                Result.success(Fresh(info, stale = false, fetchedAt = now))
+            },
+            onFailure = { err ->
+                val cached = loadCachedUserInfo(key)
+                if (cached != null) {
+                    Result.success(Fresh(cached.first, stale = true, fetchedAt = cached.second))
+                } else {
+                    Result.failure(err)
+                }
+            },
+        )
+    }
+
+    override suspend fun userStatusWithFallback(
+        handle: String,
+        from: Int,
+        count: Int,
+    ): Result<Fresh<List<Submission>>> {
+        val key = "userStatus:$handle:$from:$count"
+        val live = userStatus(handle, from, count)
+        return live.fold(
+            onSuccess = { subs ->
+                val now = System.currentTimeMillis()
+                val persisted = subs.map { it.toPersisted() }
+                persistPayload(
+                    key,
+                    json.encodeToString(ListSerializer(SubmissionPersisted.serializer()), persisted),
+                    now,
+                )
+                Result.success(Fresh(subs, stale = false, fetchedAt = now))
+            },
+            onFailure = { err ->
+                val cached = loadCachedSubmissions(key)
+                if (cached != null) {
+                    Result.success(Fresh(cached.first, stale = true, fetchedAt = cached.second))
+                } else {
+                    Result.failure(err)
+                }
+            },
+        )
+    }
+
+    private suspend fun persistPayload(key: String, payloadJson: String, fetchedAt: Long) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                cachedPayloadDao.upsert(
+                    CachedPayloadEntity(
+                        cacheKey = key,
+                        payloadJson = payloadJson,
+                        fetchedAt = fetchedAt,
+                    ),
+                )
+            }
+        }
+    }
+
+    private suspend fun loadCachedUserInfo(key: String): Pair<UserInfo, Long>? =
+        withContext(Dispatchers.IO) {
+            val entity = runCatching { cachedPayloadDao.get(key) }.getOrNull() ?: return@withContext null
+            runCatching {
+                json.decodeFromString(UserInfoPersisted.serializer(), entity.payloadJson).toDomain()
+            }.getOrNull()?.let { it to entity.fetchedAt }
+        }
+
+    private suspend fun loadCachedSubmissions(key: String): Pair<List<Submission>, Long>? =
+        withContext(Dispatchers.IO) {
+            val entity = runCatching { cachedPayloadDao.get(key) }.getOrNull() ?: return@withContext null
+            runCatching {
+                json.decodeFromString(
+                    ListSerializer(SubmissionPersisted.serializer()),
+                    entity.payloadJson,
+                ).map { it.toDomain() }
+            }.getOrNull()?.let { it to entity.fetchedAt }
         }
 
     private suspend fun <T> fetch(

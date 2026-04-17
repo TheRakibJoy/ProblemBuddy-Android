@@ -9,4 +9,7 @@ data class RecommendState(
     val filters: Filters = Filters(),
     val error: String? = null,
     val filterSheetOpen: Boolean = false,
+    val hasCorpus: Boolean = true,
+    val stale: Boolean = false,
+    val fetchedAtMillis: Long? = null,
 )

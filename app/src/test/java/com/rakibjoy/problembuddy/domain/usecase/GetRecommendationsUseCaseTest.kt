@@ -8,6 +8,7 @@ import com.rakibjoy.problembuddy.core.database.entity.InteractionEntity
 import com.rakibjoy.problembuddy.core.database.entity.ProblemEntity
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.domain.model.Filters
+import com.rakibjoy.problembuddy.domain.model.Fresh
 import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.Submission
 import com.rakibjoy.problembuddy.domain.model.UserInfo
@@ -90,13 +91,18 @@ class GetRecommendationsUseCaseTest {
     @Test
     fun returnsFilteredRecommendations() = runTest {
         every { settingsStore.cfHandle } returns flowOf(handle)
-        coEvery { codeforces.userInfo(handle) } returns Result.success(
-            UserInfo(handle = handle, rating = 1500, maxRating = 1500, rank = null, maxRank = null),
+        coEvery { codeforces.userInfoWithFallback(handle) } returns Result.success(
+            Fresh(
+                value = UserInfo(handle = handle, rating = 1500, maxRating = 1500, rank = null, maxRank = null),
+                stale = false,
+                fetchedAt = 0L,
+            ),
         )
         // User solved (102,A) and (102,B). Also a non-expert problem that shouldn't affect tier weak tags.
         // To push "dp" and "graphs" as weakest, ensure low coverage for them.
-        coEvery { codeforces.userStatus(handle, 1, 100_000) } returns Result.success(
-            listOf(
+        coEvery { codeforces.userStatusWithFallback(handle, 1, 100_000) } returns Result.success(
+            Fresh(
+                value = listOf(
                 sub(102, "A", 1500, listOf("dp")),
                 sub(102, "B", 1550, listOf("graphs", "math")),
                 // Some math solves to make "math" not the weakest.
@@ -121,6 +127,9 @@ class GetRecommendationsUseCaseTest {
                 sub(307, "A", 1500, listOf("ds")),
                 sub(308, "A", 1500, listOf("ds")),
                 sub(309, "A", 1500, listOf("ds")),
+                ),
+                stale = false,
+                fetchedAt = 0L,
             ),
         )
         coEvery { counterDao.getByTier(expertTier) } returns counters
@@ -136,7 +145,7 @@ class GetRecommendationsUseCaseTest {
         )
 
         assertTrue(result.isSuccess, "expected success, got $result")
-        val problems = result.getOrThrow()
+        val problems = result.getOrThrow().problems
         assertTrue(problems.size <= 3, "size=${problems.size}")
         // Not solved
         val solvedKeys = setOf(102 to "A", 102 to "B")
@@ -165,7 +174,7 @@ class GetRecommendationsUseCaseTest {
     fun userInfoFailure_propagates() = runTest {
         every { settingsStore.cfHandle } returns flowOf(handle)
         val boom = RuntimeException("cf down")
-        coEvery { codeforces.userInfo(handle) } returns Result.failure(boom)
+        coEvery { codeforces.userInfoWithFallback(handle) } returns Result.failure(boom)
 
         val result = useCase(Filters())
 

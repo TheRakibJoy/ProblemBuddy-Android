@@ -51,17 +51,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
+import com.rakibjoy.problembuddy.core.ui.components.StaleDataBanner
 import com.rakibjoy.problembuddy.domain.model.Filters
 import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.Tier
 
 @Composable
-fun RecommendScreen(viewModel: RecommendViewModel = hiltViewModel()) {
+fun RecommendScreen(
+    onNavigateToTrain: (() -> Unit)? = null,
+    viewModel: RecommendViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -80,7 +86,11 @@ fun RecommendScreen(viewModel: RecommendViewModel = hiltViewModel()) {
             }
         }
     }
-    RecommendScreen(state = state, onIntent = viewModel::onIntent)
+    RecommendScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onNavigateToTrain = onNavigateToTrain,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +98,7 @@ fun RecommendScreen(viewModel: RecommendViewModel = hiltViewModel()) {
 fun RecommendScreen(
     state: RecommendState,
     onIntent: (RecommendIntent) -> Unit,
+    onNavigateToTrain: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = {
@@ -101,22 +112,40 @@ fun RecommendScreen(
             )
         },
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
         ) {
-            when {
-                state.loading -> SkeletonList()
-                state.error != null -> ErrorView(
-                    message = state.error,
-                    onRetry = { onIntent(RecommendIntent.Refresh) },
+            if (state.stale) {
+                StaleDataBanner(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                    fetchedAtMillis = state.fetchedAtMillis,
                 )
-                state.problems.isEmpty() -> EmptyView()
-                else -> ProblemList(
-                    problems = state.problems,
-                    onIntent = onIntent,
-                )
+            }
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    state.loading -> SkeletonList()
+                    state.error != null -> ErrorView(
+                        message = state.error,
+                        onRetry = { onIntent(RecommendIntent.Refresh) },
+                    )
+                    state.problems.isEmpty() && !state.hasCorpus -> Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        EmptyCorpusCard(
+                            onTrainClicked = { onNavigateToTrain?.invoke() },
+                        )
+                    }
+                    state.problems.isEmpty() -> EmptyView()
+                    else -> ProblemList(
+                        problems = state.problems,
+                        onIntent = onIntent,
+                    )
+                }
             }
         }
         if (state.filterSheetOpen) {
@@ -146,6 +175,7 @@ private fun SkeletonList() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
+                        .testTag("skeleton-card")
                         .background(Color.Gray.copy(alpha = 0.2f)),
                 )
             }

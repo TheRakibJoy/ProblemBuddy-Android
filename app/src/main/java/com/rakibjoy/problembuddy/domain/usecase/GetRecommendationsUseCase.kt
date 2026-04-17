@@ -8,6 +8,7 @@ import com.rakibjoy.problembuddy.data.mapper.toDomain
 import com.rakibjoy.problembuddy.data.recommender.TierIndex
 import com.rakibjoy.problembuddy.domain.model.Filters
 import com.rakibjoy.problembuddy.domain.model.Problem
+import com.rakibjoy.problembuddy.domain.model.RecommendationsResult
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import kotlinx.coroutines.Dispatchers
@@ -22,18 +23,21 @@ class GetRecommendationsUseCase @Inject constructor(
     private val interactionDao: InteractionDao,
     private val settingsStore: SettingsStore,
 ) {
-    suspend operator fun invoke(filters: Filters): Result<List<Problem>> {
+    suspend operator fun invoke(filters: Filters): Result<RecommendationsResult> {
         val handle = settingsStore.cfHandle.first()
         if (handle.isNullOrBlank()) {
             return Result.failure(IllegalStateException("No handle set"))
         }
 
-        val userInfoResult = codeforces.userInfo(handle)
-        val userInfo = userInfoResult.getOrElse { return Result.failure(it) }
+        val userInfoResult = codeforces.userInfoWithFallback(handle)
+        val userInfoFresh = userInfoResult.getOrElse { return Result.failure(it) }
+        val userInfo = userInfoFresh.value
         val tier = Tier.forMaxRating(userInfo.maxRating ?: userInfo.rating ?: 0)
 
-        val statusResult = codeforces.userStatus(handle, 1, 100_000)
-        val submissions = statusResult.getOrElse { return Result.failure(it) }
+        val statusResult = codeforces.userStatusWithFallback(handle, 1, 100_000)
+        val statusFresh = statusResult.getOrElse { return Result.failure(it) }
+        val submissions = statusFresh.value
+        val stale = userInfoFresh.stale || statusFresh.stale
 
         val accepted = submissions.filter { it.verdict == "OK" }
 
@@ -93,6 +97,6 @@ class GetRecommendationsUseCase @Inject constructor(
             .take(filters.count)
             .toList()
 
-        return Result.success(filtered)
+        return Result.success(RecommendationsResult(problems = filtered, stale = stale))
     }
 }

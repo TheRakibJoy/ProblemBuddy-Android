@@ -34,12 +34,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
+import com.rakibjoy.problembuddy.core.ui.components.StaleDataBanner
 import com.rakibjoy.problembuddy.domain.model.Tier
 
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
+fun ProfileScreen(
+    onNavigateToTrain: (() -> Unit)? = null,
+    viewModel: ProfileViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ProfileScreen(state = state, onIntent = viewModel::onIntent)
+    ProfileScreen(
+        state = state,
+        onIntent = viewModel::onIntent,
+        onNavigateToTrain = onNavigateToTrain,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +56,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
 fun ProfileScreen(
     state: ProfileState,
     onIntent: (ProfileIntent) -> Unit,
+    onNavigateToTrain: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("Profile") }) },
@@ -58,7 +68,11 @@ fun ProfileScreen(
                 message = state.error,
                 onRetry = { onIntent(ProfileIntent.Refresh) },
             )
-            else -> ProfileContent(padding = padding, state = state)
+            else -> ProfileContent(
+                padding = padding,
+                state = state,
+                onNavigateToTrain = onNavigateToTrain,
+            )
         }
     }
 }
@@ -99,7 +113,11 @@ private fun ErrorContent(
 }
 
 @Composable
-private fun ProfileContent(padding: PaddingValues, state: ProfileState) {
+private fun ProfileContent(
+    padding: PaddingValues,
+    state: ProfileState,
+    onNavigateToTrain: (() -> Unit)? = null,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -108,13 +126,19 @@ private fun ProfileContent(padding: PaddingValues, state: ProfileState) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        if (state.stale) {
+            StaleDataBanner(fetchedAtMillis = state.fetchedAtMillis)
+        }
         Header(
             handle = state.handle,
             rating = state.rating,
             maxRating = state.maxRating,
         )
         TierLadder(currentTier = state.currentTier)
-        WeakTagsSection(weakTags = state.weakTags)
+        WeakTagsSection(
+            weakTags = state.weakTags,
+            onNavigateToTrain = onNavigateToTrain,
+        )
     }
 }
 
@@ -203,7 +227,10 @@ private fun TierPill(tier: Tier, currentTier: Tier?) {
 private enum class PillRole { Past, Current, Future, Muted }
 
 @Composable
-private fun WeakTagsSection(weakTags: List<WeakTagStat>) {
+private fun WeakTagsSection(
+    weakTags: List<WeakTagStat>,
+    onNavigateToTrain: (() -> Unit)? = null,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             "Weak tags",
@@ -211,10 +238,7 @@ private fun WeakTagsSection(weakTags: List<WeakTagStat>) {
             fontWeight = FontWeight.SemiBold,
         )
         if (weakTags.isEmpty()) {
-            Text(
-                "Run training first to see weak tags.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            EmptyCorpusCard(onTrainClicked = { onNavigateToTrain?.invoke() })
         } else {
             weakTags.forEach { stat -> WeakTagRow(stat) }
         }

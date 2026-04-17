@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.domain.model.CodeforcesException
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
+import com.rakibjoy.problembuddy.domain.util.HandleValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -42,10 +43,9 @@ class OnboardingViewModel @Inject constructor(
     private fun onHandleChanged(value: String) {
         validationJob?.cancel()
         val trimmed = value.trim()
-        val immediate: HandleValidation = when {
-            trimmed.isBlank() || trimmed.length < 3 -> HandleValidation.Invalid("Too short")
-            !HANDLE_REGEX.matches(trimmed) -> HandleValidation.Invalid("Invalid characters")
-            else -> HandleValidation.Idle
+        val immediate: HandleValidation = when (val r = HandleValidator.validate(value)) {
+            is HandleValidator.Result.Invalid -> HandleValidation.Invalid(r.reason)
+            HandleValidator.Result.Valid -> HandleValidation.Idle
         }
         _state.update { it.copy(handleInput = value, validation = immediate) }
         if (immediate is HandleValidation.Invalid) return
@@ -84,9 +84,5 @@ class OnboardingViewModel @Inject constructor(
                 _state.update { it.copy(submitting = false) }
             }
         }
-    }
-
-    private companion object {
-        val HANDLE_REGEX = Regex("^[A-Za-z0-9_.-]+$")
     }
 }

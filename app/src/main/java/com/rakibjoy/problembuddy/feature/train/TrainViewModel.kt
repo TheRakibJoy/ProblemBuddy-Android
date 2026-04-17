@@ -7,6 +7,7 @@ import com.rakibjoy.problembuddy.domain.model.CodeforcesException
 import com.rakibjoy.problembuddy.domain.model.TrainingJob
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
+import com.rakibjoy.problembuddy.domain.util.HandleValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -68,13 +69,12 @@ class TrainViewModel @Inject constructor(
         validationJob = viewModelScope.launch {
             delay(300)
             val trimmed = value.trim()
-            if (trimmed.isBlank() || trimmed.length < 3) {
-                updateValidation(HandleValidation.Invalid("Too short"))
-                return@launch
-            }
-            if (!HANDLE_REGEX.matches(trimmed)) {
-                updateValidation(HandleValidation.Invalid("Invalid characters"))
-                return@launch
+            when (val r = HandleValidator.validate(value)) {
+                is HandleValidator.Result.Invalid -> {
+                    updateValidation(HandleValidation.Invalid(r.reason))
+                    return@launch
+                }
+                HandleValidator.Result.Valid -> Unit
             }
             updateValidation(HandleValidation.Validating)
             codeforces.userInfo(trimmed).fold(
@@ -118,9 +118,5 @@ class TrainViewModel @Inject constructor(
             job.status == TrainingJob.Status.SUCCESS ||
             job.status == TrainingJob.Status.FAILED
         return validHandle && jobIdle
-    }
-
-    private companion object {
-        val HANDLE_REGEX = Regex("^[A-Za-z0-9_.-]+$")
     }
 }
