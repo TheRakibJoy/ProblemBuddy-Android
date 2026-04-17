@@ -5,7 +5,14 @@ identifies your weak topics from your solved set and recommends problems from an
 on-device corpus of strong handles' submissions — **no backend**, everything runs on
 the device.
 
-> Status: feature-complete through the build guide in [`app/CLAUDE.md`](app/CLAUDE.md).
+This is the Android port of the web app at
+[TheRakibJoy/ProblemBuddy](https://github.com/TheRakibJoy/ProblemBuddy) (Django +
+React). Same recommendation logic, now running entirely on your phone.
+
+Idea and original project by **[RakibJoy](https://codeforces.com/profile/RakibJoy)**.
+
+> Status: feature-complete through the build guide in
+> [`app/Implementation Plan.md`](app/Implementation%20Plan.md).
 > Release APKs are published automatically to the [`downloads`](../../tree/downloads)
 > branch of this repo on every push to `main`.
 
@@ -201,9 +208,10 @@ Two GitHub Actions workflows in [`.github/workflows/`](.github/workflows):
 ## Contributing
 
 The single source of truth for the architecture and implementation order is
-[`app/CLAUDE.md`](app/CLAUDE.md). Read it before making non-trivial changes.
+[`app/Implementation Plan.md`](app/Implementation%20Plan.md). Read it before making
+non-trivial changes.
 
-House rules (from CLAUDE.md §8):
+House rules (from `Implementation Plan.md` §8):
 
 1. No `android.*` / `androidx.*` imports in `domain/`. Domain is pure Kotlin.
 2. State mutates only through `_state.update { … }` inside the ViewModel reducer.
@@ -211,6 +219,14 @@ House rules (from CLAUDE.md §8):
    repository boundary — never on the main thread.
 4. `domain.model.Tier` is the only source of truth for rating thresholds.
 5. One screen = one ViewModel. Share repositories, not ViewModels.
+
+## Credits
+
+- **Concept, algorithms, and web app** by [RakibJoy](https://codeforces.com/profile/RakibJoy)
+  — see the original Django + React implementation at
+  [TheRakibJoy/ProblemBuddy](https://github.com/TheRakibJoy/ProblemBuddy).
+- Android port developed against the architecture in
+  [`app/Implementation Plan.md`](app/Implementation%20Plan.md).
 
 ## License
 

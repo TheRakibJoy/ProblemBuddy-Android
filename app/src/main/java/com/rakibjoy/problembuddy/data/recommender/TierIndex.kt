@@ -8,7 +8,7 @@ import kotlin.math.sqrt
  * a list of weak tags. Pure Kotlin (no Android/DI dependencies); intended to
  * be cached at a higher level per (tier, corpus version).
  *
- * Algorithm mirrors `app/CLAUDE.md` §6.
+ * Algorithm mirrors `app/Implementation Plan.md` §6.
  */
 class TierIndex(
     val problems: List<Problem>,
