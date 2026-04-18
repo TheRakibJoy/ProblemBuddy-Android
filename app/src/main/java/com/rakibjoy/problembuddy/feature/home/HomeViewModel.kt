@@ -8,6 +8,7 @@ import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
+import com.rakibjoy.problembuddy.domain.usecase.GetTodayProblemUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -44,6 +45,7 @@ class HomeViewModel @Inject constructor(
     private val trainingJobRepository: TrainingJobRepository,
     private val problemDao: ProblemDao,
     private val reviewRepository: ReviewRepository,
+    private val getTodayProblem: GetTodayProblemUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -273,7 +275,20 @@ class HomeViewModel @Inject constructor(
             val total = runCatching {
                 Tier.entries.sumOf { problemDao.countByTier(it.name.lowercase()) }
             }.getOrDefault(0)
-            _state.update { it.copy(hasCorpus = total > 0) }
+            val hasCorpus = total > 0
+            _state.update { it.copy(hasCorpus = hasCorpus) }
+            if (hasCorpus && !_state.value.handle.isNullOrBlank()) {
+                refreshTodayProblem()
+            } else if (!hasCorpus || _state.value.handle.isNullOrBlank()) {
+                _state.update { it.copy(todayProblem = null) }
+            }
+        }
+    }
+
+    private fun refreshTodayProblem() {
+        viewModelScope.launch {
+            val problem = runCatching { getTodayProblem() }.getOrNull()
+            _state.update { it.copy(todayProblem = problem) }
         }
     }
 }

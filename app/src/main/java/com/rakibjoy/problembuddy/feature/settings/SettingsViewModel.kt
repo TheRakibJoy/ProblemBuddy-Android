@@ -8,6 +8,7 @@ import com.rakibjoy.problembuddy.core.database.dao.InteractionDao
 import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
 import com.rakibjoy.problembuddy.core.database.dao.TrainingJobDao
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
+import com.rakibjoy.problembuddy.core.work.DailyProblemScheduler
 import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,7 @@ class SettingsViewModel @Inject constructor(
     private val interactionDao: InteractionDao,
     private val trainingJobDao: TrainingJobDao,
     private val reviewRepository: ReviewRepository,
+    private val dailyProblemScheduler: DailyProblemScheduler,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -56,6 +58,15 @@ class SettingsViewModel @Inject constructor(
             .launchIn(viewModelScope)
         settingsStore.weeklyGoal
             .onEach { v -> _state.update { it.copy(weeklyGoal = v) } }
+            .launchIn(viewModelScope)
+        settingsStore.dailyNotificationEnabled
+            .onEach { v -> _state.update { it.copy(dailyNotificationEnabled = v) } }
+            .launchIn(viewModelScope)
+        settingsStore.dailyNotificationHour
+            .onEach { v -> _state.update { it.copy(dailyNotificationHour = v) } }
+            .launchIn(viewModelScope)
+        settingsStore.dailyNotificationMinute
+            .onEach { v -> _state.update { it.copy(dailyNotificationMinute = v) } }
             .launchIn(viewModelScope)
     }
 
@@ -87,6 +98,32 @@ class SettingsViewModel @Inject constructor(
             SettingsIntent.DismissDeleteAllConfirm ->
                 _state.update { it.copy(showDeleteAllConfirm = false) }
             SettingsIntent.ConfirmDeleteAll -> confirmDeleteAll()
+            is SettingsIntent.SetDailyNotification -> viewModelScope.launch {
+                settingsStore.setDailyNotificationEnabled(intent.enabled)
+                if (intent.enabled) {
+                    dailyProblemScheduler.enqueue(
+                        _state.value.dailyNotificationHour,
+                        _state.value.dailyNotificationMinute,
+                    )
+                } else {
+                    dailyProblemScheduler.cancel()
+                }
+            }
+            is SettingsIntent.SetDailyNotificationHour -> viewModelScope.launch {
+                val hour = intent.hour.coerceIn(0, 23)
+                settingsStore.setDailyNotificationHour(hour)
+                if (_state.value.dailyNotificationEnabled) {
+                    dailyProblemScheduler.enqueue(hour, _state.value.dailyNotificationMinute)
+                }
+            }
+            is SettingsIntent.SetDailyNotificationTime -> viewModelScope.launch {
+                val hour = intent.hour.coerceIn(0, 23)
+                val minute = intent.minute.coerceIn(0, 59)
+                settingsStore.setDailyNotificationTime(hour, minute)
+                if (_state.value.dailyNotificationEnabled) {
+                    dailyProblemScheduler.enqueue(hour, minute)
+                }
+            }
         }
     }
 
@@ -118,6 +155,7 @@ class SettingsViewModel @Inject constructor(
                 trainingJobDao.deleteAll()
                 reviewRepository.clearAll()
             }
+            settingsStore.clearDailyProblem()
             settingsStore.clearAll()
             _effects.send(SettingsEffect.NavigateToOnboarding)
             _effects.send(SettingsEffect.ShowToast("All data deleted"))

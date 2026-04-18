@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
+import com.rakibjoy.problembuddy.core.ui.components.DailyProblemCard
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import com.rakibjoy.problembuddy.core.ui.components.HandleText
@@ -176,6 +177,26 @@ fun HomeScreen(
                             streakDays = state.streakDays,
                             hoursUntilMidnight = hours,
                             minutesUntilMidnight = minutes,
+                        )
+                    }
+                }
+
+                state.todayProblem?.let { p ->
+                    item(key = "today-problem") {
+                        DailyProblemCard(
+                            problem = p,
+                            onSolve = {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(
+                                                "https://codeforces.com/problemset/problem/${p.contestId}/${p.problemIndex}",
+                                            ),
+                                        ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+                                    )
+                                }
+                            },
                         )
                     }
                 }

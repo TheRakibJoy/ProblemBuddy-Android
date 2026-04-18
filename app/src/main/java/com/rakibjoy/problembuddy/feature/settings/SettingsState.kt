@@ -11,4 +11,7 @@ data class SettingsState(
     val resetCorpusBusy: Boolean = false,
     val showResetCorpusConfirm: Boolean = false,
     val showDeleteAllConfirm: Boolean = false,
+    val dailyNotificationEnabled: Boolean = false,
+    val dailyNotificationHour: Int = 10,
+    val dailyNotificationMinute: Int = 0,
 )

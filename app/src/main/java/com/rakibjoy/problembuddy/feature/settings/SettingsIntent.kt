@@ -14,4 +14,7 @@ sealed interface SettingsIntent {
     data object RequestDeleteAll : SettingsIntent
     data object ConfirmDeleteAll : SettingsIntent
     data object DismissDeleteAllConfirm : SettingsIntent
+    data class SetDailyNotification(val enabled: Boolean) : SettingsIntent
+    data class SetDailyNotificationHour(val hour: Int) : SettingsIntent
+    data class SetDailyNotificationTime(val hour: Int, val minute: Int) : SettingsIntent
 }

@@ -1,8 +1,14 @@
 package com.rakibjoy.problembuddy.feature.settings
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -27,8 +33,10 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
@@ -46,11 +54,15 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -122,6 +134,12 @@ fun SettingsScreen(
                 )
                 GoalsGroup(
                     weeklyGoal = state.weeklyGoal,
+                    onIntent = onIntent,
+                )
+                NotificationsGroup(
+                    enabled = state.dailyNotificationEnabled,
+                    hour = state.dailyNotificationHour,
+                    minute = state.dailyNotificationMinute,
                     onIntent = onIntent,
                 )
                 DataGroup(
@@ -443,6 +461,128 @@ private fun GoalsGroup(
     }
 }
 
+
+@Composable
+private fun NotificationsGroup(
+    enabled: Boolean,
+    hour: Int,
+    minute: Int,
+    onIntent: (SettingsIntent) -> Unit,
+) {
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            onIntent(SettingsIntent.SetDailyNotification(true))
+        } else {
+            Toast.makeText(
+                context,
+                "allow notifications to enable daily reminders",
+                Toast.LENGTH_SHORT,
+            ).show()
+            onIntent(SettingsIntent.SetDailyNotification(false))
+        }
+    }
+
+    SettingsGroup(title = "NOTIFICATIONS") {
+        SettingsRow(
+            icon = Icons.Outlined.Notifications,
+            title = "daily problem reminder",
+            subtitle = "one problem nudged to your notifications each day.",
+            trailing = {
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = { checked ->
+                        if (!checked) {
+                            onIntent(SettingsIntent.SetDailyNotification(false))
+                        } else {
+                            val needsRuntime =
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                            val granted = if (needsRuntime) {
+                                ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.POST_NOTIFICATIONS,
+                                ) == PackageManager.PERMISSION_GRANTED
+                            } else {
+                                true
+                            }
+                            if (granted) {
+                                onIntent(SettingsIntent.SetDailyNotification(true))
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    },
+                )
+            },
+        )
+        if (enabled) {
+            var showPicker by remember { mutableStateOf(false) }
+            SettingsRow(
+                icon = Icons.Outlined.Schedule,
+                title = "time",
+                subtitle = "tap to pick hour and minute.",
+                trailing = {
+                    TextButton(onClick = { showPicker = true }) {
+                        Text(
+                            text = formatHm(hour, minute),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.appExtras.accentVioletSoft,
+                        )
+                    }
+                },
+            )
+            if (showPicker) {
+                TimePickerDialog(
+                    initialHour = hour,
+                    initialMinute = minute,
+                    onDismiss = { showPicker = false },
+                    onConfirm = { h, m ->
+                        onIntent(SettingsIntent.SetDailyNotificationTime(h, m))
+                        showPicker = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun formatHm(hour: Int, minute: Int): String {
+    val h = hour.coerceIn(0, 23).toString().padStart(2, '0')
+    val m = minute.coerceIn(0, 59).toString().padStart(2, '0')
+    return "$h:$m"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialog(
+    initialHour: Int,
+    initialMinute: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (hour: Int, minute: Int) -> Unit,
+) {
+    val pickerState = androidx.compose.material3.rememberTimePickerState(
+        initialHour = initialHour.coerceIn(0, 23),
+        initialMinute = initialMinute.coerceIn(0, 59),
+        is24Hour = true,
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = AppShapes.large,
+        text = {
+            androidx.compose.material3.TimePicker(state = pickerState)
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(pickerState.hour, pickerState.minute) }) {
+                Text("set")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("cancel") }
+        },
+    )
+}
 
 @Composable
 private fun AboutGroup() {

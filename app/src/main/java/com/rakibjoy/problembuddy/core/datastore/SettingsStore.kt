@@ -2,6 +2,7 @@ package com.rakibjoy.problembuddy.core.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -22,6 +23,11 @@ private object PreferenceKeys {
     val KEY_COMPARE_HANDLE = stringPreferencesKey("compare_handle")
     val KEY_WEEKLY_GOAL = intPreferencesKey("weekly_goal")
     val KEY_LAST_SUBMISSION_ID_BY_HANDLE = stringPreferencesKey("last_submission_id_by_handle")
+    val KEY_DAILY_PROBLEM_DATE = stringPreferencesKey("daily_problem_date")
+    val KEY_DAILY_PROBLEM_JSON = stringPreferencesKey("daily_problem_json")
+    val KEY_DAILY_NOTIFICATION_ENABLED = booleanPreferencesKey("daily_notif_enabled")
+    val KEY_DAILY_NOTIFICATION_HOUR = intPreferencesKey("daily_notif_hour")
+    val KEY_DAILY_NOTIFICATION_MINUTE = intPreferencesKey("daily_notif_minute")
 }
 
 private val submissionMapSerializer = MapSerializer(String.serializer(), Long.serializer())
@@ -134,6 +140,59 @@ class SettingsStore @Inject constructor(
     suspend fun setWeeklyGoal(value: Int) {
         dataStore.edit { prefs ->
             prefs[PreferenceKeys.KEY_WEEKLY_GOAL] = value
+        }
+    }
+
+    val dailyProblemDate: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[PreferenceKeys.KEY_DAILY_PROBLEM_DATE]
+    }
+
+    val dailyProblemJson: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[PreferenceKeys.KEY_DAILY_PROBLEM_JSON]
+    }
+
+    suspend fun setDailyProblem(date: String, json: String) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.KEY_DAILY_PROBLEM_DATE] = date
+            prefs[PreferenceKeys.KEY_DAILY_PROBLEM_JSON] = json
+        }
+    }
+
+    suspend fun clearDailyProblem() {
+        dataStore.edit { prefs ->
+            prefs.remove(PreferenceKeys.KEY_DAILY_PROBLEM_DATE)
+            prefs.remove(PreferenceKeys.KEY_DAILY_PROBLEM_JSON)
+        }
+    }
+
+    val dailyNotificationEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[PreferenceKeys.KEY_DAILY_NOTIFICATION_ENABLED] ?: false
+    }
+
+    val dailyNotificationHour: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[PreferenceKeys.KEY_DAILY_NOTIFICATION_HOUR] ?: 10
+    }
+
+    val dailyNotificationMinute: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[PreferenceKeys.KEY_DAILY_NOTIFICATION_MINUTE] ?: 0
+    }
+
+    suspend fun setDailyNotificationEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.KEY_DAILY_NOTIFICATION_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setDailyNotificationHour(hour: Int) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.KEY_DAILY_NOTIFICATION_HOUR] = hour.coerceIn(0, 23)
+        }
+    }
+
+    suspend fun setDailyNotificationTime(hour: Int, minute: Int) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.KEY_DAILY_NOTIFICATION_HOUR] = hour.coerceIn(0, 23)
+            prefs[PreferenceKeys.KEY_DAILY_NOTIFICATION_MINUTE] = minute.coerceIn(0, 59)
         }
     }
 

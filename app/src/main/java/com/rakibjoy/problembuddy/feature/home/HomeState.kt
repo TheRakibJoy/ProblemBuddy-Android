@@ -30,6 +30,7 @@ data class HomeState(
     val upsolve: List<UpsolveProblem> = emptyList(),
     val todayPicks: List<TodayPick> = emptyList(),
     val reviewsDue: List<DueReview> = emptyList(),
+    val todayProblem: Problem? = null,
 )
 
 data class DueReview(
