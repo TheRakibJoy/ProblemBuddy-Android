@@ -49,10 +49,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,7 +68,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -352,6 +358,7 @@ private fun LoadedList(
 
 private enum class CardVariant { Default, Solved, Skipped }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecommendProblemCard(
     problem: Problem,
@@ -371,6 +378,32 @@ private fun RecommendProblemCard(
         CardVariant.Skipped -> 0.30f
     }
     val metaText = buildMetaText(problem)
+    val haptics = LocalHapticFeedback.current
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { target ->
+            when (target) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onSolve()
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onSave()
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    true
+                }
+                else -> false
+            }
+        },
+        positionalThreshold = { it * 0.35f },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = Modifier.clip(shape),
+        backgroundContent = { SwipeBackground(state = dismissState) },
+        enableDismissFromStartToEnd = variant == CardVariant.Default,
+        enableDismissFromEndToStart = variant == CardVariant.Default,
+    ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -447,6 +480,72 @@ private fun RecommendProblemCard(
                             modifier = Modifier.size(13.dp),
                         )
                     }
+                }
+            }
+        }
+    }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeBackground(state: SwipeToDismissBoxState) {
+    val extras = MaterialTheme.appExtras
+    val shape = AppShapes.large
+    val target = state.targetValue
+    val fraction = state.progress.coerceIn(0f, 1f)
+    val bgColor = when (target) {
+        SwipeToDismissBoxValue.StartToEnd -> extras.accentVioletSoft
+        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+        SwipeToDismissBoxValue.Settled -> Color.Transparent
+    }
+    val alignment = when (target) {
+        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+        SwipeToDismissBoxValue.Settled -> Alignment.Center
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(bgColor, shape)
+            .padding(horizontal = 20.dp),
+        contentAlignment = alignment,
+    ) {
+        if (target != SwipeToDismissBoxValue.Settled) {
+            Row(
+                modifier = Modifier.alpha(fraction),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when (target) {
+                    SwipeToDismissBoxValue.StartToEnd -> {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = "open",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                    SwipeToDismissBoxValue.EndToStart -> {
+                        Text(
+                            text = "skip",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    else -> Unit
                 }
             }
         }

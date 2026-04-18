@@ -8,6 +8,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.rakibjoy.problembuddy.domain.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,7 +21,11 @@ private object PreferenceKeys {
     val KEY_DIFFICULTY_OFFSET = intPreferencesKey("difficulty_offset")
     val KEY_COMPARE_HANDLE = stringPreferencesKey("compare_handle")
     val KEY_WEEKLY_GOAL = intPreferencesKey("weekly_goal")
+    val KEY_LAST_SUBMISSION_ID_BY_HANDLE = stringPreferencesKey("last_submission_id_by_handle")
 }
+
+private val submissionMapSerializer = MapSerializer(String.serializer(), Long.serializer())
+private val submissionMapJson = Json { ignoreUnknownKeys = true }
 
 @Singleton
 class SettingsStore @Inject constructor(
@@ -51,6 +58,39 @@ class SettingsStore @Inject constructor(
 
     val weeklyGoal: Flow<Int> = dataStore.data.map { prefs ->
         prefs[PreferenceKeys.KEY_WEEKLY_GOAL] ?: 10
+    }
+
+    val lastSubmissionIdByHandle: Flow<Map<String, Long>> = dataStore.data.map { prefs ->
+        val raw = prefs[PreferenceKeys.KEY_LAST_SUBMISSION_ID_BY_HANDLE] ?: return@map emptyMap()
+        try {
+            submissionMapJson.decodeFromString(submissionMapSerializer, raw)
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun setLastSubmissionId(handle: String, id: Long) {
+        dataStore.edit { prefs ->
+            val raw = prefs[PreferenceKeys.KEY_LAST_SUBMISSION_ID_BY_HANDLE]
+            val current = if (raw.isNullOrEmpty()) {
+                emptyMap()
+            } else {
+                try {
+                    submissionMapJson.decodeFromString(submissionMapSerializer, raw)
+                } catch (_: Exception) {
+                    emptyMap()
+                }
+            }
+            val updated = current.toMutableMap().apply { put(handle, id) }
+            prefs[PreferenceKeys.KEY_LAST_SUBMISSION_ID_BY_HANDLE] =
+                submissionMapJson.encodeToString(submissionMapSerializer, updated)
+        }
+    }
+
+    suspend fun clearSubmissionCheckpoints() {
+        dataStore.edit { prefs ->
+            prefs.remove(PreferenceKeys.KEY_LAST_SUBMISSION_ID_BY_HANDLE)
+        }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {

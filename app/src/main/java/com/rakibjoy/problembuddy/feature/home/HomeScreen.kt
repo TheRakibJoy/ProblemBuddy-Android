@@ -59,6 +59,7 @@ import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import com.rakibjoy.problembuddy.core.ui.components.HandleText
 import com.rakibjoy.problembuddy.core.ui.components.NextTierProgress
 import com.rakibjoy.problembuddy.core.ui.components.RatingRail
+import com.rakibjoy.problembuddy.core.ui.components.ReviewDueRow
 import com.rakibjoy.problembuddy.core.ui.components.SparklineCard
 import com.rakibjoy.problembuddy.core.ui.components.StatCard
 import com.rakibjoy.problembuddy.core.ui.components.StreakRiskBanner
@@ -213,6 +214,36 @@ fun HomeScreen(
                             current = state.weeklySolved,
                             target = state.weeklyGoal,
                         )
+                    }
+                }
+
+                if (state.reviewsDue.isNotEmpty()) {
+                    item(key = "reviews-due-header") {
+                        SectionHeaderRow(
+                            title = "DUE FOR REVIEW",
+                            actionLabel = "${state.reviewsDue.size} due",
+                            onActionClick = {},
+                        )
+                    }
+                    for (due in state.reviewsDue) {
+                        item(key = "review-due-${due.id}") {
+                            ReviewDueRow(
+                                problemLabel = "${due.contestId}${due.problemIndex}",
+                                box = due.box,
+                                onReview = {
+                                    val uri = Uri.parse(
+                                        "https://codeforces.com/problemset/problem/${due.contestId}/${due.problemIndex}",
+                                    )
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, uri).apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            },
+                                        )
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
 

@@ -7,6 +7,7 @@ import com.rakibjoy.problembuddy.core.database.dao.CounterDao
 import com.rakibjoy.problembuddy.core.database.dao.HandleDao
 import com.rakibjoy.problembuddy.core.database.dao.InteractionDao
 import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
+import com.rakibjoy.problembuddy.core.database.dao.ReviewDao
 import com.rakibjoy.problembuddy.core.database.dao.TrainingJobDao
 import dagger.Module
 import dagger.Provides
@@ -53,4 +54,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideCachedPayloadDao(db: ProblemBuddyDatabase): CachedPayloadDao = db.cachedPayloadDao()
+
+    @Provides
+    @Singleton
+    fun provideReviewDao(db: ProblemBuddyDatabase): ReviewDao = db.reviewDao()
 }

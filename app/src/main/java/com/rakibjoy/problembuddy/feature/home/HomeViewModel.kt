@@ -6,15 +6,19 @@ import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
+import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,6 +43,7 @@ class HomeViewModel @Inject constructor(
     private val codeforces: CodeforcesRepository,
     private val trainingJobRepository: TrainingJobRepository,
     private val problemDao: ProblemDao,
+    private val reviewRepository: ReviewRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -54,6 +59,20 @@ class HomeViewModel @Inject constructor(
             settingsStore.weeklyGoal.distinctUntilChanged().collect { goal ->
                 _state.update { it.copy(weeklyGoal = goal) }
             }
+        }
+        viewModelScope.launch {
+            observeReviewsDue()
+                .collect { reviews ->
+                    val due = reviews.take(5).map { r ->
+                        DueReview(
+                            id = r.id,
+                            contestId = r.contestId,
+                            problemIndex = r.problemIndex,
+                            box = r.box,
+                        )
+                    }
+                    _state.update { it.copy(reviewsDue = due) }
+                }
         }
         viewModelScope.launch {
             combine(
@@ -113,6 +132,15 @@ class HomeViewModel @Inject constructor(
     private fun emit(effect: HomeEffect) {
         viewModelScope.launch { _effects.send(effect) }
     }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun observeReviewsDue() =
+        flow {
+            while (true) {
+                emit(System.currentTimeMillis() / 1000L)
+                delay(60_000L)
+            }
+        }.flatMapLatest { nowSeconds -> reviewRepository.observeDue(nowSeconds) }
 
     private fun fetchUserInfo(handle: String) {
         viewModelScope.launch {

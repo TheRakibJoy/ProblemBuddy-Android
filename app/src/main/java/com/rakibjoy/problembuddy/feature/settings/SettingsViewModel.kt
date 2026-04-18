@@ -8,6 +8,7 @@ import com.rakibjoy.problembuddy.core.database.dao.InteractionDao
 import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
 import com.rakibjoy.problembuddy.core.database.dao.TrainingJobDao
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
+import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -31,6 +32,7 @@ class SettingsViewModel @Inject constructor(
     private val handleDao: HandleDao,
     private val interactionDao: InteractionDao,
     private val trainingJobDao: TrainingJobDao,
+    private val reviewRepository: ReviewRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -98,6 +100,7 @@ class SettingsViewModel @Inject constructor(
                 counterDao.deleteAll()
                 handleDao.deleteAll()
                 trainingJobDao.deleteAll()
+                reviewRepository.clearAll()
             }
             _state.update { it.copy(resetCorpusBusy = false) }
             _effects.send(SettingsEffect.ShowToast("Corpus cleared"))
@@ -113,6 +116,7 @@ class SettingsViewModel @Inject constructor(
                 handleDao.deleteAll()
                 interactionDao.deleteAll()
                 trainingJobDao.deleteAll()
+                reviewRepository.clearAll()
             }
             settingsStore.clearAll()
             _effects.send(SettingsEffect.NavigateToOnboarding)

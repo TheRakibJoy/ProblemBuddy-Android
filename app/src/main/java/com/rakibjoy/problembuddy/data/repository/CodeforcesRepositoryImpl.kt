@@ -2,6 +2,7 @@ package com.rakibjoy.problembuddy.data.repository
 
 import com.rakibjoy.problembuddy.core.database.dao.CachedPayloadDao
 import com.rakibjoy.problembuddy.core.database.entity.CachedPayloadEntity
+import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.core.network.CodeforcesApi
 import com.rakibjoy.problembuddy.core.network.dto.CfEnvelope
 import com.rakibjoy.problembuddy.data.cache.SubmissionPersisted
@@ -18,6 +19,7 @@ import com.rakibjoy.problembuddy.domain.model.UpcomingContest
 import com.rakibjoy.problembuddy.domain.model.UserInfo
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -32,7 +34,10 @@ class CodeforcesRepositoryImpl @Inject constructor(
     private val api: CodeforcesApi,
     private val cachedPayloadDao: CachedPayloadDao,
     private val json: Json,
+    private val settingsStore: SettingsStore,
 ) : CodeforcesRepository {
+
+    private val submissionCacheByHandle = ConcurrentHashMap<String, List<Submission>>()
 
     private data class CacheEntry<T>(val value: T, val expiresAt: Long)
 
@@ -106,6 +111,9 @@ class CodeforcesRepositoryImpl @Inject constructor(
         from: Int,
         count: Int,
     ): Result<Fresh<List<Submission>>> {
+        if (from == 1 && count >= 1000) {
+            return incrementalUserStatus(handle, count)
+        }
         val key = "userStatus:$handle:$from:$count"
         val live = userStatus(handle, from, count)
         return live.fold(
@@ -128,6 +136,96 @@ class CodeforcesRepositoryImpl @Inject constructor(
                 }
             },
         )
+    }
+
+    private suspend fun incrementalUserStatus(
+        handle: String,
+        requestedCount: Int,
+    ): Result<Fresh<List<Submission>>> = withContext(Dispatchers.IO) {
+        val persistKey = "userStatus:$handle:1:$requestedCount"
+        val cached = submissionCacheByHandle[handle] ?: emptyList()
+        val checkpoint = runCatching {
+            settingsStore.lastSubmissionIdByHandle.first()[handle]
+        }.getOrNull()
+
+        try {
+            val newest = mutableListOf<Submission>()
+            var page = 1
+            val pageSize = 100
+            val maxPages = 6
+            var reachedKnown = false
+
+            while (page <= maxPages) {
+                val batch = api.userStatus(
+                    handle = handle,
+                    from = (page - 1) * pageSize + 1,
+                    count = pageSize,
+                ).resolveOk().map { it.toDomain() }
+
+                if (batch.isEmpty()) {
+                    reachedKnown = true
+                    break
+                }
+
+                val knownIdx = checkpoint?.let { cp -> batch.indexOfFirst { it.id == cp } } ?: -1
+                if (knownIdx >= 0) {
+                    newest.addAll(batch.subList(0, knownIdx))
+                    reachedKnown = true
+                    break
+                } else {
+                    newest.addAll(batch)
+                }
+                if (batch.size < pageSize) {
+                    reachedKnown = true
+                    break
+                }
+                page++
+            }
+
+            val merged = when {
+                reachedKnown -> (newest + cached).distinctBy { it.id }
+                else -> {
+                    // No checkpoint or gap too large — fall back to full fetch.
+                    api.userStatus(handle, from = 1, count = 100_000)
+                        .resolveOk().map { it.toDomain() }
+                }
+            }
+
+            submissionCacheByHandle[handle] = merged
+            merged.maxByOrNull { it.id }?.let { top ->
+                runCatching { settingsStore.setLastSubmissionId(handle, top.id) }
+            }
+
+            val now = System.currentTimeMillis()
+            val persisted = merged.map { it.toPersisted() }
+            persistPayload(
+                persistKey,
+                json.encodeToString(ListSerializer(SubmissionPersisted.serializer()), persisted),
+                now,
+            )
+            putCached("userStatus:$handle:1:$requestedCount", merged)
+            Result.success(Fresh(merged, stale = false, fetchedAt = now))
+        } catch (e: CodeforcesException) {
+            loadCachedSubmissions(persistKey)?.let {
+                Result.success(Fresh(it.first, stale = true, fetchedAt = it.second))
+            } ?: Result.failure(e)
+        } catch (e: HttpException) {
+            val mapped = when (e.code()) {
+                429, 503 -> CodeforcesException.RateLimited()
+                else -> CodeforcesException.CodeforcesUnavailable(e.message() ?: "HTTP ${e.code()}")
+            }
+            loadCachedSubmissions(persistKey)?.let {
+                Result.success(Fresh(it.first, stale = true, fetchedAt = it.second))
+            } ?: Result.failure(mapped)
+        } catch (e: IOException) {
+            loadCachedSubmissions(persistKey)?.let {
+                Result.success(Fresh(it.first, stale = true, fetchedAt = it.second))
+            } ?: Result.failure(CodeforcesException.CodeforcesUnavailable(e.message ?: "Network error"))
+        } catch (e: Exception) {
+            loadCachedSubmissions(persistKey)?.let {
+                Result.success(Fresh(it.first, stale = true, fetchedAt = it.second))
+            } ?: Result.failure(CodeforcesException.CodeforcesUnavailable(e.message ?: "Unknown error"))
+        }
     }
 
     private suspend fun persistPayload(key: String, payloadJson: String, fetchedAt: Long) {
