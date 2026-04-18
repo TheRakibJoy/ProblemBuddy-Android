@@ -2,6 +2,7 @@ package com.rakibjoy.problembuddy.feature.recommend
 
 import android.content.Intent
 import android.net.Uri
+import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -10,6 +11,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +22,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -29,21 +31,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilterAltOff
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,10 +49,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,30 +65,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
+import com.rakibjoy.problembuddy.core.ui.components.ChipState
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
+import com.rakibjoy.problembuddy.core.ui.components.FilterBar
+import com.rakibjoy.problembuddy.core.ui.components.FilterChipSpec
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
+import com.rakibjoy.problembuddy.core.ui.components.RatingRail
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonCard
 import com.rakibjoy.problembuddy.core.ui.components.StaleDataBanner
 import com.rakibjoy.problembuddy.core.ui.components.TagChip
-import com.rakibjoy.problembuddy.core.ui.components.TierBadge
 import com.rakibjoy.problembuddy.core.ui.components.pressScale
 import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
-import com.rakibjoy.problembuddy.core.ui.theme.Elevations
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
 import com.rakibjoy.problembuddy.core.ui.theme.Spacing
-import com.rakibjoy.problembuddy.core.ui.theme.palette
+import com.rakibjoy.problembuddy.core.ui.theme.appExtras
 import com.rakibjoy.problembuddy.domain.model.Filters
 import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.ThemeMode
@@ -146,10 +153,13 @@ fun RecommendScreen(
             containerColor = Color.Transparent,
             topBar = {
                 AppTopBar(
-                    title = "For you",
                     actions = {
                         IconButton(onClick = { onIntent(RecommendIntent.OpenFilters) }) {
-                            Icon(Icons.Filled.FilterList, contentDescription = "Filters")
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = "Filters",
+                                tint = MaterialTheme.appExtras.textTertiary,
+                            )
                         }
                     },
                 )
@@ -160,15 +170,21 @@ fun RecommendScreen(
                     .padding(padding)
                     .fillMaxSize(),
             ) {
-                if (state.stale) {
-                    StaleDataBanner(
-                        modifier = Modifier.padding(
-                            horizontal = Spacing.lg,
-                            vertical = Spacing.sm,
-                        ),
-                        fetchedAtMillis = state.fetchedAtMillis,
-                    )
+                val ratingRange: IntRange? = remember(state.filters.minRating, state.filters.maxRating) {
+                    val min = state.filters.minRating
+                    val max = state.filters.maxRating
+                    if (min != null && max != null && min <= max) min..max else null
                 }
+                val chipSpecs = remember(state.filters) {
+                    buildFilterChips(state.filters)
+                }
+                FilterBar(
+                    ratingRange = ratingRange,
+                    chips = chipSpecs,
+                    onChipToggled = { onIntent(RecommendIntent.OpenFilters) },
+                    onRangeClicked = { onIntent(RecommendIntent.OpenFilters) },
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
                 Crossfade(
                     targetState = when {
                         state.loading -> ContentMode.Loading
@@ -214,8 +230,8 @@ fun RecommendScreen(
                                 onAction = { onIntent(RecommendIntent.OpenFilters) },
                             )
                         }
-                        ContentMode.Loaded -> ProblemList(
-                            problems = state.problems,
+                        ContentMode.Loaded -> LoadedList(
+                            state = state,
                             onIntent = onIntent,
                         )
                     }
@@ -234,35 +250,69 @@ fun RecommendScreen(
 
 private enum class ContentMode { Loading, Error, NoCorpus, Empty, Loaded }
 
+private fun buildFilterChips(filters: Filters): List<FilterChipSpec> {
+    val chips = mutableListOf<FilterChipSpec>()
+    if (filters.weakOnly) chips += FilterChipSpec("weak only", ChipState.Include)
+    filters.includeTags.forEach { chips += FilterChipSpec(it, ChipState.Include) }
+    filters.excludeTags.forEach { chips += FilterChipSpec(it, ChipState.Exclude) }
+    return chips
+}
+
 @Composable
 private fun SkeletonList() {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        contentPadding = PaddingValues(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            bottom = Spacing.lg,
+        ),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         items(5) { SkeletonCard() }
     }
 }
 
+private fun problemKey(p: Problem): String = "${p.contestId}-${p.problemIndex}"
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ProblemList(
-    problems: List<Problem>,
+private fun LoadedList(
+    state: RecommendState,
     onIntent: (RecommendIntent) -> Unit,
 ) {
+    val primaryPickKey = remember(state.problems, state.solvedKeys, state.skippedKeys) {
+        state.problems.firstOrNull { p ->
+            val k = problemKey(p)
+            k !in state.solvedKeys && k !in state.skippedKeys
+        }?.let(::problemKey)
+    }
+    val syncLabel = remember(state.fetchedAtMillis) { state.fetchedAtMillis?.let(::formatRelativeShort) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        contentPadding = PaddingValues(
+            start = Spacing.lg,
+            end = Spacing.lg,
+            bottom = Spacing.lg,
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (state.stale) {
+            item(key = "stale-banner") {
+                StaleDataBanner(
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    fetchedAtMillis = state.fetchedAtMillis,
+                )
+            }
+        }
         itemsIndexed(
-            items = problems,
-            key = { _, p -> "${p.contestId}-${p.problemIndex}" },
+            items = state.problems,
+            key = { _, p -> problemKey(p) },
         ) { index, problem ->
             var visible by remember { mutableStateOf(false) }
             LaunchedEffect(problem.contestId, problem.problemIndex) {
-                val delayMs = (80L * index.coerceAtMost(6))
+                val delayMs = (60L * index.coerceAtMost(6))
                 kotlinx.coroutines.delay(delayMs)
                 visible = true
             }
@@ -272,160 +322,294 @@ private fun ProblemList(
                 exit = fadeOut(),
                 modifier = Modifier.animateItemPlacement(),
             ) {
-                ProblemCard(
+                val key = problemKey(problem)
+                val variant = when {
+                    key in state.solvedKeys -> CardVariant.Solved
+                    key in state.skippedKeys -> CardVariant.Skipped
+                    else -> CardVariant.Default
+                }
+                RecommendProblemCard(
                     problem = problem,
+                    weakTags = state.weakTags,
+                    variant = variant,
+                    isPrimaryPick = key == primaryPickKey,
                     onSolve = { onIntent(RecommendIntent.OpenUrl(problem)) },
-                    onMarkSolved = { onIntent(RecommendIntent.MarkSolved(problem)) },
-                    onSkip = { onIntent(RecommendIntent.Skip(problem)) },
+                    onSave = { onIntent(RecommendIntent.Skip(problem)) },
                 )
+            }
+        }
+        item(key = "footer") {
+            val total = state.totalMatching ?: state.problems.size
+            val shown = state.problems.size
+            val base = "showing $shown of $total"
+            val text = if (syncLabel != null) "$base · corpus last synced $syncLabel" else base
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.appExtras.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+            )
+        }
+    }
+}
+
+private enum class CardVariant { Default, Solved, Skipped }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecommendProblemCard(
+    problem: Problem,
+    weakTags: Set<String>,
+    variant: CardVariant,
+    isPrimaryPick: Boolean,
+    onSolve: () -> Unit,
+    onSave: () -> Unit,
+) {
+    val extras = MaterialTheme.appExtras
+    val tier = remember(problem.rating) { Tier.forMaxRating(problem.rating ?: 0) }
+    val shape = AppShapes.large
+    val displayName = problem.name.ifBlank { "Problem ${problem.contestId}${problem.problemIndex}" }
+    val rowAlpha = when (variant) {
+        CardVariant.Default -> 1f
+        CardVariant.Solved -> 0.45f
+        CardVariant.Skipped -> 0.30f
+    }
+    val metaText = buildMetaText(problem)
+    val haptics = LocalHapticFeedback.current
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { target ->
+            when (target) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onSolve()
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onSave()
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    true
+                }
+                else -> false
+            }
+        },
+        positionalThreshold = { it * 0.35f },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = Modifier.clip(shape),
+        backgroundContent = { SwipeBackground(state = dismissState) },
+        enableDismissFromStartToEnd = variant == CardVariant.Default,
+        enableDismissFromEndToStart = variant == CardVariant.Default,
+    ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(rowAlpha)
+            .clip(shape)
+            .background(extras.surfaceElevated, shape)
+            .border(0.5.dp, extras.borderSubtle, shape)
+            .pressScale(0.99f)
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RatingRail(rating = problem.rating ?: 0, tier = tier)
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = displayName,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = (-0.12).sp,
+                    textDecoration = if (variant == CardVariant.Solved) TextDecoration.LineThrough else null,
+                ),
+                color = if (variant == CardVariant.Solved) extras.textTertiary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.size(5.dp))
+            Text(
+                text = metaText,
+                style = MaterialTheme.typography.labelSmall,
+                color = extras.textTertiary,
+            )
+            if (problem.tags.isNotEmpty()) {
+                Spacer(Modifier.size(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    problem.tags.take(4).forEach { tag ->
+                        TagChip(tag = tag, weak = tag in weakTags)
+                    }
+                }
+            }
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            when (variant) {
+                CardVariant.Solved -> SolvedCheckIcon()
+                CardVariant.Skipped -> { /* no actions */ }
+                CardVariant.Default -> {
+                    ActionButton(
+                        onClick = onSolve,
+                        tint = if (isPrimaryPick) extras.accentVioletSoft else extras.textTertiary,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Open problem",
+                            modifier = Modifier.size(13.dp),
+                        )
+                    }
+                    ActionButton(
+                        onClick = onSave,
+                        tint = extras.textTertiary,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Skip",
+                            modifier = Modifier.size(13.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeBackground(state: SwipeToDismissBoxState) {
+    val extras = MaterialTheme.appExtras
+    val shape = AppShapes.large
+    val target = state.targetValue
+    val fraction = state.progress.coerceIn(0f, 1f)
+    val bgColor = when (target) {
+        SwipeToDismissBoxValue.StartToEnd -> extras.accentVioletSoft
+        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+        SwipeToDismissBoxValue.Settled -> Color.Transparent
+    }
+    val alignment = when (target) {
+        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+        SwipeToDismissBoxValue.Settled -> Alignment.Center
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(bgColor, shape)
+            .padding(horizontal = 20.dp),
+        contentAlignment = alignment,
+    ) {
+        if (target != SwipeToDismissBoxValue.Settled) {
+            Row(
+                modifier = Modifier.alpha(fraction),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when (target) {
+                    SwipeToDismissBoxValue.StartToEnd -> {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = "open",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                    SwipeToDismissBoxValue.EndToStart -> {
+                        Text(
+                            text = "skip",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    else -> Unit
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ProblemCard(
-    problem: Problem,
-    onSolve: () -> Unit,
-    onMarkSolved: () -> Unit,
-    onSkip: () -> Unit,
+private fun ActionButton(
+    onClick: () -> Unit,
+    tint: Color,
+    content: @Composable () -> Unit,
 ) {
-    val tier = remember(problem.rating) { Tier.forMaxRating(problem.rating ?: 0) }
-    val accent = tier.palette().strong
-    val shape = AppShapes.large
-    val displayName = problem.name.ifBlank { "Problem ${problem.contestId}${problem.problemIndex}" }
-    val outline = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    Card(
+    val extras = MaterialTheme.appExtras
+    val shape = RoundedCornerShape(7.dp)
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .pressScale(0.98f),
-        shape = shape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.card),
-        border = androidx.compose.foundation.BorderStroke(1.dp, outline),
+            .size(26.dp)
+            .clip(shape)
+            .border(0.5.dp, extras.borderSubtle, shape)
+            .clickable(onClick = onClick)
+            .pressScale(0.92f),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // 4dp tier accent bar on the left.
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(accent),
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(Spacing.lg),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TierBadge(tier = tier, compact = true)
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = "#${problem.contestId}${problem.problemIndex}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.size(Spacing.sm))
-                Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.size(Spacing.sm))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(Spacing.xs))
-                    Text(
-                        text = "${problem.rating ?: "—"}",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                if (problem.tags.isNotEmpty()) {
-                    Spacer(Modifier.size(Spacing.sm))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    ) {
-                        problem.tags.take(5).forEach { tag ->
-                            TagChip(tag = tag)
-                        }
-                    }
-                }
-                Spacer(Modifier.size(Spacing.md))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Button(
-                        onClick = onSolve,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .pressScale(0.96f),
-                    ) {
-                        Text("Solve", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.width(Spacing.xs))
-                        Icon(
-                            imageVector = Icons.Default.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                    var menuOpen by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More actions",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = menuOpen,
-                            onDismissRequest = { menuOpen = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Mark solved") },
-                                onClick = {
-                                    menuOpen = false
-                                    onMarkSolved()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Skip") },
-                                onClick = {
-                                    menuOpen = false
-                                    onSkip()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Close, contentDescription = null)
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides tint,
+            content = content,
+        )
     }
 }
+
+@Composable
+private fun SolvedCheckIcon() {
+    Box(
+        modifier = Modifier.size(26.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = "Solved",
+            tint = MaterialTheme.appExtras.deltaPositive,
+            modifier = Modifier.size(15.dp),
+        )
+    }
+}
+
+private fun buildMetaText(p: Problem): String {
+    // Best-effort: "$contestId · $index". Division is unknown from the
+    // domain model, so we omit it rather than guessing.
+    return "${p.contestId} · ${p.problemIndex}"
+}
+
+private fun formatRelativeShort(fetchedAtMillis: Long): String {
+    val now = System.currentTimeMillis()
+    return DateUtils.getRelativeTimeSpanString(
+        fetchedAtMillis,
+        now,
+        DateUtils.MINUTE_IN_MILLIS,
+        DateUtils.FORMAT_ABBREV_RELATIVE,
+    ).toString()
+}
+
+// ---------------------------------------------------------------------------
+// Filter sheet (unchanged from prior revision, kept minimal)
+// ---------------------------------------------------------------------------
 
 private enum class TagSelectState { None, Include, Exclude }
 
@@ -435,35 +619,12 @@ private fun ExcludableTagChip(
     state: TagSelectState,
     onClick: () -> Unit,
 ) {
-    val bg = when (state) {
-        TagSelectState.None -> MaterialTheme.colorScheme.surfaceVariant
-        TagSelectState.Include -> MaterialTheme.colorScheme.primaryContainer
-        TagSelectState.Exclude -> MaterialTheme.colorScheme.errorContainer
-    }
-    val fg = when (state) {
-        TagSelectState.None -> MaterialTheme.colorScheme.onSurfaceVariant
-        TagSelectState.Include -> MaterialTheme.colorScheme.onPrimaryContainer
-        TagSelectState.Exclude -> MaterialTheme.colorScheme.onErrorContainer
-    }
-    val decoration = if (state == TagSelectState.Exclude) TextDecoration.LineThrough else TextDecoration.None
-    Surface(
-        modifier = Modifier
-            .clip(AppShapes.small)
-            .background(Color.Transparent)
-            .pressScale(0.97f),
-        color = bg,
-        contentColor = fg,
-        shape = AppShapes.small,
+    TagChip(
+        tag = tag,
+        selected = state == TagSelectState.Include,
+        excluded = state == TagSelectState.Exclude,
         onClick = onClick,
-    ) {
-        Text(
-            text = "#$tag",
-            style = MaterialTheme.typography.labelSmall,
-            color = fg,
-            textDecoration = decoration,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-        )
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -492,7 +653,6 @@ private fun FilterSheet(
                 "Filters",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             )
-            // Count section
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -519,7 +679,6 @@ private fun FilterSheet(
                     steps = 28,
                 )
             }
-            // Rating range
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Text("Rating range", style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -541,7 +700,6 @@ private fun FilterSheet(
                     )
                 }
             }
-            // Include tags (chips)
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Text("Include any of", style = MaterialTheme.typography.titleSmall)
                 FlowRow(
@@ -550,10 +708,7 @@ private fun FilterSheet(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     KnownTags.forEach { tag ->
-                        val selState = when {
-                            includeTags.contains(tag) -> TagSelectState.Include
-                            else -> TagSelectState.None
-                        }
+                        val selState = if (includeTags.contains(tag)) TagSelectState.Include else TagSelectState.None
                         ExcludableTagChip(
                             tag = tag,
                             state = selState,
@@ -569,7 +724,6 @@ private fun FilterSheet(
                     }
                 }
             }
-            // Exclude tags (chips)
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Text("Exclude", style = MaterialTheme.typography.titleSmall)
                 FlowRow(
@@ -578,10 +732,7 @@ private fun FilterSheet(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     KnownTags.forEach { tag ->
-                        val selState = when {
-                            excludeTags.contains(tag) -> TagSelectState.Exclude
-                            else -> TagSelectState.None
-                        }
+                        val selState = if (excludeTags.contains(tag)) TagSelectState.Exclude else TagSelectState.None
                         ExcludableTagChip(
                             tag = tag,
                             state = selState,
@@ -597,12 +748,20 @@ private fun FilterSheet(
                     }
                 }
             }
-            SwitchCardRow(
-                title = "Only weak tags",
-                subtitle = "Focus on topics you struggle with.",
-                checked = weakOnly,
-                onCheckedChange = { weakOnly = it },
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Only weak tags", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Focus on topics you struggle with.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = weakOnly, onCheckedChange = { weakOnly = it })
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
@@ -629,36 +788,9 @@ private fun FilterSheet(
     }
 }
 
-@Composable
-private fun SwitchCardRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
-        }
-    }
-}
+// ---------------------------------------------------------------------------
+// Previews
+// ---------------------------------------------------------------------------
 
 @Preview(name = "Recommend - Loading (Dark)", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
@@ -668,17 +800,31 @@ private fun RecommendScreenLoadingPreview() {
     }
 }
 
-@Preview(name = "Recommend - Cards (Dark)", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Preview(name = "Recommend - Loaded (Dark)", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
-private fun RecommendScreenCardsPreview() {
+private fun RecommendScreenLoadedPreview() {
+    val sample = listOf(
+        Problem(1854, "G", "Segment Tree Beats", 2100, listOf("data structures", "segment tree", "lazy prop")),
+        Problem(1891, "F", "K-D Tree Queries", 1900, listOf("data structures", "divide and conquer")),
+        Problem(1849, "H", "Persistent Segment Tree", 2000, listOf("trees", "data structures")),
+        Problem(1872, "E", "Euler Tour Trick", 1800, listOf("trees", "dfs and similar")),
+    )
     ProblemBuddyTheme(themeMode = ThemeMode.DARK) {
         RecommendScreen(
             state = RecommendState(
                 loading = false,
-                problems = listOf(
-                    Problem(1520, "A", "Do Not Be Distracted", 800, listOf("implementation", "strings")),
-                    Problem(1530, "B", "Putting Plates", 1500, listOf("constructive algorithms", "greedy")),
-                    Problem(1540, "C", "Tree XOR", 2100, listOf("dp", "trees", "bitmasks")),
+                problems = sample,
+                weakTags = setOf("data structures", "dfs and similar"),
+                totalMatching = 138,
+                fetchedAtMillis = System.currentTimeMillis() - 2 * 3_600_000L,
+                solvedKeys = setOf("1891-F"),
+                skippedKeys = setOf("1849-H"),
+                filters = Filters(
+                    minRating = 1800,
+                    maxRating = 2200,
+                    includeTags = setOf("data structures"),
+                    excludeTags = setOf("greedy"),
+                    weakOnly = true,
                 ),
             ),
             onIntent = {},

@@ -1,10 +1,17 @@
 package com.rakibjoy.problembuddy.feature.settings
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -16,38 +23,49 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.automirrored.outlined.TrendingUp
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -55,6 +73,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.BuildConfig
@@ -63,6 +82,7 @@ import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
 import com.rakibjoy.problembuddy.core.ui.theme.Spacing
+import com.rakibjoy.problembuddy.core.ui.theme.appExtras
 import com.rakibjoy.problembuddy.domain.model.ThemeMode
 
 @Composable
@@ -96,20 +116,30 @@ fun SettingsScreen(
     GradientSurface {
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { AppTopBar(title = "Settings") },
+            topBar = { AppTopBar() },
         ) { padding ->
             Column(
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 AppearanceGroup(theme = state.theme, onIntent = onIntent)
                 RecommendationsGroup(
                     recsPerLoad = state.recsPerLoad,
                     difficultyOffset = state.difficultyOffset,
+                    onIntent = onIntent,
+                )
+                GoalsGroup(
+                    weeklyGoal = state.weeklyGoal,
+                    onIntent = onIntent,
+                )
+                NotificationsGroup(
+                    enabled = state.dailyNotificationEnabled,
+                    hour = state.dailyNotificationHour,
+                    minute = state.dailyNotificationMinute,
                     onIntent = onIntent,
                 )
                 DataGroup(
@@ -178,23 +208,25 @@ private fun SettingsGroup(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val extras = MaterialTheme.appExtras
     Column(Modifier.fillMaxWidth()) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = Spacing.md, bottom = Spacing.sm),
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.0.sp,
+            color = extras.textTertiary,
+            modifier = Modifier.padding(bottom = 6.dp),
         )
-        Card(
-            shape = AppShapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        ) {
-            Column(
-                modifier = Modifier.padding(Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                content = content,
-            )
-        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(extras.surfaceElevated)
+                .border(0.5.dp, extras.borderSubtle, RoundedCornerShape(10.dp))
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            content = content,
+        )
     }
 }
 
@@ -203,10 +235,11 @@ private fun SettingsRow(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
-    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    iconTint: Color = MaterialTheme.appExtras.textSecondary,
     trailing: @Composable (() -> Unit)? = null,
     belowContent: @Composable (() -> Unit)? = null,
 ) {
+    val extras = MaterialTheme.appExtras
     Column(
         Modifier
             .fillMaxWidth()
@@ -215,7 +248,7 @@ private fun SettingsRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp),
+                .heightIn(min = 40.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // decorative
@@ -223,20 +256,20 @@ private fun SettingsRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.size(Spacing.md))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = extras.textTertiary,
                     )
                 }
             }
@@ -261,11 +294,11 @@ private fun AppearanceGroup(
     SettingsGroup(title = "APPEARANCE") {
         SettingsRow(
             icon = Icons.Outlined.Palette,
-            title = "Theme",
-            subtitle = "Match your system or pick a side",
+            title = "theme",
+            subtitle = "follow your device or lock to light / dark.",
             belowContent = {
                 val modes = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
-                val labels = listOf("System", "Light", "Dark")
+                val labels = listOf("system", "light", "dark")
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     modes.forEachIndexed { index, mode ->
                         SegmentedButton(
@@ -294,12 +327,13 @@ private fun RecommendationsGroup(
     SettingsGroup(title = "RECOMMENDATIONS") {
         SettingsRow(
             icon = Icons.Outlined.Tune,
-            title = "Problems per load",
+            title = "problems per load",
+            subtitle = "how many problems recommend shows at once.",
             trailing = {
                 Text(
                     text = "$recsPerLoad",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.appExtras.accentVioletSoft,
                 )
             },
             belowContent = {
@@ -317,17 +351,18 @@ private fun RecommendationsGroup(
         )
         SettingsRow(
             icon = Icons.AutoMirrored.Outlined.TrendingUp,
-            title = "Difficulty offset",
+            title = "difficulty offset",
+            subtitle = "shift target problem rating up or down from your own.",
             trailing = {
                 val signed = when {
                     difficultyOffset > 0 -> "+$difficultyOffset"
                     difficultyOffset < 0 -> "$difficultyOffset"
-                    else -> "±0"
+                    else -> "\u00B10"
                 }
                 Text(
                     text = signed,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.appExtras.accentVioletSoft,
                 )
             },
             belowContent = {
@@ -354,8 +389,8 @@ private fun DataGroup(
     SettingsGroup(title = "DATA") {
         SettingsRow(
             icon = Icons.Default.RestartAlt,
-            title = "Reset corpus",
-            subtitle = "Keep your handle, clear trained problems.",
+            title = "reset corpus",
+            subtitle = "clears trained problems and counters. keeps your handle and settings.",
             trailing = {
                 TextButton(
                     onClick = { onIntent(SettingsIntent.RequestResetCorpus) },
@@ -367,7 +402,7 @@ private fun DataGroup(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text("Reset")
+                        Text("reset")
                     }
                 }
             },
@@ -375,8 +410,8 @@ private fun DataGroup(
         SettingsRow(
             icon = Icons.Default.DeleteForever,
             iconTint = MaterialTheme.colorScheme.error,
-            title = "Delete all data",
-            subtitle = "Wipes everything and returns to onboarding.",
+            title = "delete all data",
+            subtitle = "wipes handle, corpus, settings, and interactions. sends you back to onboarding.",
             trailing = {
                 Button(
                     onClick = { onIntent(SettingsIntent.RequestDeleteAll) },
@@ -384,12 +419,169 @@ private fun DataGroup(
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     ),
+                    shape = RoundedCornerShape(8.dp),
                 ) {
-                    Text("Delete")
+                    Text("delete")
                 }
             },
         )
     }
+}
+
+@Composable
+private fun GoalsGroup(
+    weeklyGoal: Int,
+    onIntent: (SettingsIntent) -> Unit,
+) {
+    SettingsGroup(title = "GOALS") {
+        SettingsRow(
+            icon = Icons.Outlined.Flag,
+            title = "weekly solve goal",
+            subtitle = "target problems solved per week. tracked on home.",
+            trailing = {
+                Text(
+                    text = "$weeklyGoal",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.appExtras.accentVioletSoft,
+                )
+            },
+            belowContent = {
+                Slider(
+                    value = weeklyGoal.toFloat(),
+                    onValueChange = { onIntent(SettingsIntent.SetWeeklyGoal(it.toInt())) },
+                    valueRange = 1f..50f,
+                    steps = 48,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+            },
+        )
+    }
+}
+
+
+@Composable
+private fun NotificationsGroup(
+    enabled: Boolean,
+    hour: Int,
+    minute: Int,
+    onIntent: (SettingsIntent) -> Unit,
+) {
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            onIntent(SettingsIntent.SetDailyNotification(true))
+        } else {
+            Toast.makeText(
+                context,
+                "allow notifications to enable daily reminders",
+                Toast.LENGTH_SHORT,
+            ).show()
+            onIntent(SettingsIntent.SetDailyNotification(false))
+        }
+    }
+
+    SettingsGroup(title = "NOTIFICATIONS") {
+        SettingsRow(
+            icon = Icons.Outlined.Notifications,
+            title = "daily problem reminder",
+            subtitle = "one problem nudged to your notifications each day.",
+            trailing = {
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = { checked ->
+                        if (!checked) {
+                            onIntent(SettingsIntent.SetDailyNotification(false))
+                        } else {
+                            val needsRuntime =
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                            val granted = if (needsRuntime) {
+                                ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.POST_NOTIFICATIONS,
+                                ) == PackageManager.PERMISSION_GRANTED
+                            } else {
+                                true
+                            }
+                            if (granted) {
+                                onIntent(SettingsIntent.SetDailyNotification(true))
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    },
+                )
+            },
+        )
+        if (enabled) {
+            var showPicker by remember { mutableStateOf(false) }
+            SettingsRow(
+                icon = Icons.Outlined.Schedule,
+                title = "time",
+                subtitle = "tap to pick hour and minute.",
+                trailing = {
+                    TextButton(onClick = { showPicker = true }) {
+                        Text(
+                            text = formatHm(hour, minute),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.appExtras.accentVioletSoft,
+                        )
+                    }
+                },
+            )
+            if (showPicker) {
+                TimePickerDialog(
+                    initialHour = hour,
+                    initialMinute = minute,
+                    onDismiss = { showPicker = false },
+                    onConfirm = { h, m ->
+                        onIntent(SettingsIntent.SetDailyNotificationTime(h, m))
+                        showPicker = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun formatHm(hour: Int, minute: Int): String {
+    val h = hour.coerceIn(0, 23).toString().padStart(2, '0')
+    val m = minute.coerceIn(0, 59).toString().padStart(2, '0')
+    return "$h:$m"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialog(
+    initialHour: Int,
+    initialMinute: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (hour: Int, minute: Int) -> Unit,
+) {
+    val pickerState = androidx.compose.material3.rememberTimePickerState(
+        initialHour = initialHour.coerceIn(0, 23),
+        initialMinute = initialMinute.coerceIn(0, 59),
+        is24Hour = true,
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = AppShapes.large,
+        text = {
+            androidx.compose.material3.TimePicker(state = pickerState)
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(pickerState.hour, pickerState.minute) }) {
+                Text("set")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("cancel") }
+        },
+    )
 }
 
 @Composable
@@ -398,8 +590,8 @@ private fun AboutGroup() {
     SettingsGroup(title = "ABOUT") {
         SettingsRow(
             icon = Icons.Outlined.Favorite,
-            title = "Made by RakibJoy",
-            subtitle = "Idea, algorithms, and original web app",
+            title = "made by RakibJoy",
+            subtitle = "tap to open his codeforces profile.",
             trailing = {
                 TextButton(onClick = {
                     val intent = Intent(
@@ -414,35 +606,32 @@ private fun AboutGroup() {
         )
         SettingsRow(
             icon = Icons.Outlined.Info,
-            title = "Version",
+            title = "version",
+            subtitle = "app build currently installed on your device.",
             trailing = {
                 Text(
                     text = runCatching { BuildConfig.VERSION_NAME }.getOrDefault("1.0"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appExtras.textTertiary,
                 )
             },
         )
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            SettingsRow(
-                icon = Icons.Outlined.Code,
-                title = "View source on GitHub",
-                subtitle = "TheRakibJoy/ProblemBuddy-Android",
-                trailing = {
-                    TextButton(onClick = {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://github.com/TheRakibJoy/ProblemBuddy-Android"),
-                        )
-                        runCatching { context.startActivity(intent) }
-                    }) {
-                        Text("Open")
-                    }
-                },
-            )
-        }
+        SettingsRow(
+            icon = Icons.Outlined.Code,
+            title = "view source on GitHub",
+            subtitle = "open the repository in your browser.",
+            trailing = {
+                TextButton(onClick = {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://github.com/TheRakibJoy/ProblemBuddy-Android"),
+                    )
+                    runCatching { context.startActivity(intent) }
+                }) {
+                    Text("open")
+                }
+            },
+        )
     }
 }
 

@@ -8,6 +8,7 @@ import com.rakibjoy.problembuddy.core.database.entity.InteractionEntity
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.Tier
+import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.usecase.GetRecommendationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -27,6 +28,7 @@ class RecommendViewModel @Inject constructor(
     private val interactionDao: InteractionDao,
     private val problemDao: ProblemDao,
     private val settingsStore: SettingsStore,
+    private val reviewRepository: ReviewRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RecommendState())
@@ -61,7 +63,14 @@ class RecommendViewModel @Inject constructor(
                 refresh()
             }
             is RecommendIntent.MarkSolved -> viewModelScope.launch {
-                recordInteraction(intent.problem, status = "solved")
+                val problemId = recordInteraction(intent.problem, status = "solved")
+                if (problemId != null) {
+                    reviewRepository.scheduleInitial(
+                        problemId = problemId,
+                        contestId = intent.problem.contestId,
+                        problemIndex = intent.problem.problemIndex,
+                    )
+                }
                 _state.update { it.copy(problems = it.problems.filterNot { p -> p.sameAs(intent.problem) }) }
                 _effects.send(RecommendEffect.Toast("Marked solved"))
             }
@@ -97,8 +106,8 @@ class RecommendViewModel @Inject constructor(
         )
     }
 
-    private suspend fun recordInteraction(problem: Problem, status: String) {
-        val id = problemDao.findId(problem.contestId, problem.problemIndex) ?: return
+    private suspend fun recordInteraction(problem: Problem, status: String): Long? {
+        val id = problemDao.findId(problem.contestId, problem.problemIndex) ?: return null
         interactionDao.upsert(
             InteractionEntity(
                 problemId = id,
@@ -106,6 +115,7 @@ class RecommendViewModel @Inject constructor(
                 createdAt = System.currentTimeMillis(),
             ),
         )
+        return id
     }
 
     private fun Problem.sameAs(other: Problem): Boolean =

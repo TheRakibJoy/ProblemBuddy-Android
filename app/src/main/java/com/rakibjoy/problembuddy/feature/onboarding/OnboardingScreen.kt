@@ -22,12 +22,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.rakibjoy.problembuddy.R
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,11 +57,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.components.pressScale
-import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
 import com.rakibjoy.problembuddy.core.ui.theme.Spacing
+import com.rakibjoy.problembuddy.core.ui.theme.appExtras
 import com.rakibjoy.problembuddy.domain.model.ThemeMode
 
 @Composable
@@ -90,6 +95,7 @@ fun OnboardingScreen(
     GradientSurface {
         Scaffold(
             containerColor = Color.Transparent,
+            topBar = { AppTopBar() },
         ) { padding ->
             var visible by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) { visible = true }
@@ -98,7 +104,7 @@ fun OnboardingScreen(
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize()
-                    .padding(horizontal = Spacing.xl),
+                    .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.height(Spacing.xl))
@@ -112,7 +118,7 @@ fun OnboardingScreen(
                         HeroOrb()
                         Spacer(Modifier.height(Spacing.lg))
                         Text(
-                            text = "Welcome to ProblemBuddy",
+                            text = "welcome to problembuddy",
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                             ),
@@ -121,9 +127,9 @@ fun OnboardingScreen(
                         )
                         Spacer(Modifier.height(Spacing.xs))
                         Text(
-                            text = "Your personal Codeforces coach.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = "your personal codeforces coach",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.appExtras.textSecondary,
                             textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(Spacing.lg))
@@ -131,9 +137,9 @@ fun OnboardingScreen(
                         OutlinedTextField(
                             value = state.handleInput,
                             onValueChange = { onIntent(OnboardingIntent.HandleChanged(it)) },
-                            label = { Text("Codeforces handle") },
+                            label = { Text("codeforces handle") },
                             singleLine = true,
-                            shape = AppShapes.medium,
+                            shape = RoundedCornerShape(10.dp),
                             leadingIcon = {
                                 // decorative
                                 Icon(Icons.Default.Person, contentDescription = null)
@@ -150,10 +156,14 @@ fun OnboardingScreen(
                         Button(
                             onClick = { onIntent(OnboardingIntent.SubmitClicked) },
                             enabled = state.canSubmit,
-                            shape = AppShapes.large,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
                                 .pressScale(),
                         ) {
                             if (state.submitting) {
@@ -164,7 +174,7 @@ fun OnboardingScreen(
                                 )
                             } else {
                                 Text(
-                                    text = "Continue \u2192",
+                                    text = "continue \u2192",
                                     style = MaterialTheme.typography.labelLarge.copy(
                                         fontWeight = FontWeight.SemiBold,
                                     ),
@@ -177,9 +187,9 @@ fun OnboardingScreen(
                 Spacer(Modifier.weight(1f))
 
                 Text(
-                    text = "No account. No backend. All local.",
+                    text = "we'll fetch your profile from codeforces.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.appExtras.textTertiary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -208,30 +218,30 @@ private fun HeroOrb() {
     )
     Box(
         modifier = Modifier
-            .size(96.dp)
+            .size(80.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(brush),
         contentAlignment = Alignment.Center,
     ) {
-        // decorative
-        Icon(
-            imageVector = Icons.Default.Bolt,
+        // decorative — app launcher icon
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = null,
-            tint = primary,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(72.dp),
         )
     }
 }
 
 @Composable
 private fun ValidationRow(validation: HandleValidation) {
+    val extras = MaterialTheme.appExtras
     Crossfade(targetState = validation, label = "validation") { v ->
         when (v) {
             HandleValidation.Idle -> Text(
-                text = "Enter your handle to begin.",
+                text = "enter your handle to begin.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = extras.textTertiary,
             )
             HandleValidation.Validating -> Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -242,8 +252,9 @@ private fun ValidationRow(validation: HandleValidation) {
                     strokeWidth = 2.dp,
                 )
                 Text(
-                    text = "Checking with Codeforces\u2026",
+                    text = "checking with codeforces\u2026",
                     style = MaterialTheme.typography.bodySmall,
+                    color = extras.textSecondary,
                 )
             }
             is HandleValidation.Valid -> Row(
@@ -254,32 +265,31 @@ private fun ValidationRow(validation: HandleValidation) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = extras.deltaPositive,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
-                    text = "Ready to go, ${v.handle}",
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    text = "ready to go, ${v.handle}",
+                    style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.SemiBold,
                     ),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = extras.deltaPositive,
                 )
             }
             is HandleValidation.Invalid -> Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                // decorative
-                Icon(
-                    imageVector = Icons.Default.Error,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(16.dp),
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(extras.deltaNegative),
                 )
                 Text(
                     text = v.reason,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    color = extras.deltaNegative,
                 )
             }
         }

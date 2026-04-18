@@ -6,136 +6,136 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Typography fallback strategy
-// ----------------------------
-// The design calls for Space Grotesk (display) + Inter (body) via the
-// Compose Google Fonts runtime provider. That provider requires network at
-// first paint, and this session runs without internet access. Rather than
-// ship a theme whose first render stalls or flashes, we fall back to
-// carefully tuned system FontFamilies (SansSerif body, Default display)
-// with deliberate weight + letterSpacing choices so the app still feels
-// distinctive. Swap these two families to the Google Fonts variants later
-// and the rest of the type scale stays valid.
-private val DisplayFamily: FontFamily = FontFamily.Default
-private val BodyFamily: FontFamily = FontFamily.SansSerif
+// Typography strategy
+// -------------------
+// The redesign calls for JetBrains Mono across the app. Rather than pull in
+// a Google Fonts dependency (which needs network at first paint), we use
+// the platform monospace family which on Android resolves to Droid Sans
+// Mono / Roboto Mono — visually close enough for the redesign's intent.
+// The scale is deliberately tight: the mockup leans on compact sizes
+// (9–18sp) and aggressive negative tracking on display/headline.
+//
+// Note on letter-spacing: Compose's `letterSpacing` is sp-based. Values
+// below correspond roughly to the CSS em-based tracking in the mockup:
+//   -0.06em at 26sp ≈ -1.56sp, -0.04em at 18sp ≈ -0.72sp, etc.
+private val MonoFamily: FontFamily = FontFamily.Monospace
 
 val AppTypography: Typography = Typography(
-    // ---- Display: big, tight, confident. Negative tracking + bold weight --
+    // ---- Display: big numeric/header moments. Tight negative tracking. ----
     displayLarge = TextStyle(
-        fontFamily = DisplayFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.ExtraBold,
-        fontSize = 57.sp,
-        lineHeight = 64.sp,
-        letterSpacing = (-0.5).sp,
+        fontSize = 40.sp,
+        lineHeight = 44.sp,
+        letterSpacing = (-2.0).sp,
     ),
     displayMedium = TextStyle(
-        fontFamily = DisplayFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.ExtraBold,
-        fontSize = 45.sp,
-        lineHeight = 52.sp,
-        letterSpacing = (-0.25).sp,
+        fontSize = 32.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-1.8).sp,
     ),
     displaySmall = TextStyle(
-        fontFamily = DisplayFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.ExtraBold,
-        fontSize = 36.sp,
-        lineHeight = 44.sp,
-        letterSpacing = 0.sp,
+        fontSize = 26.sp,
+        lineHeight = 30.sp,
+        letterSpacing = (-1.56).sp, // -0.06em @ 26sp
     ),
 
     // ---- Headline: section headers ----------------------------------------
     headlineLarge = TextStyle(
-        fontFamily = DisplayFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
-        letterSpacing = 0.sp,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = (-0.88).sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = DisplayFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp,
-        letterSpacing = 0.sp,
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
+        letterSpacing = (-0.8).sp,
     ),
     headlineSmall = TextStyle(
-        fontFamily = DisplayFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
-        letterSpacing = 0.sp,
+        fontSize = 18.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.72).sp, // -0.04em @ 18sp
     ),
 
-    // ---- Title: card titles, dialog titles --------------------------------
+    // ---- Title: card titles, list row heads -------------------------------
     titleLarge = TextStyle(
-        fontFamily = DisplayFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,  // title sizes = weight 600
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.32).sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = BodyFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.sp,
     ),
     titleSmall = TextStyle(
-        fontFamily = BodyFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.24.sp, // 0.02em @ 12sp
     ),
 
-    // ---- Body: reading text -----------------------------------------------
+    // ---- Body: reading text. lineHeight ~1.5 per mockup -------------------
     bodyLarge = TextStyle(
-        fontFamily = BodyFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp,
+        fontSize = 14.sp,
+        lineHeight = 21.sp,
+        letterSpacing = 0.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = BodyFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.25.sp,
+        fontSize = 13.sp,
+        lineHeight = 20.sp, // ≈ 1.5
+        letterSpacing = 0.sp,
     ),
     bodySmall = TextStyle(
-        fontFamily = BodyFamily,
+        fontFamily = MonoFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp,
-    ),
-
-    // ---- Label: buttons, chips, captions ----------------------------------
-    labelLarge = TextStyle(
-        fontFamily = BodyFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp,
-    ),
-    labelMedium = TextStyle(
-        fontFamily = BodyFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
-    ),
-    labelSmall = TextStyle(
-        fontFamily = BodyFamily,
-        fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 0.sp,
+    ),
+
+    // ---- Label: buttons, chips, uppercase captions ------------------------
+    labelLarge = TextStyle(
+        fontFamily = MonoFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.24.sp, // 0.02em @ 12sp
+    ),
+    labelMedium = TextStyle(
+        fontFamily = MonoFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 10.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.6.sp, // 0.06em @ 10sp (uppercase-friendly)
+    ),
+    labelSmall = TextStyle(
+        fontFamily = MonoFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 9.sp,
+        lineHeight = 12.sp,
+        letterSpacing = 0.72.sp, // 0.08em @ 9sp
     ),
 )
 
-// Back-compat: the original file exposed a top-level `Typography` val. Keep an
-// alias so any unknown call sites still resolve.
+// Back-compat alias: legacy call sites referenced `Typography` directly.
 val Typography: Typography = AppTypography

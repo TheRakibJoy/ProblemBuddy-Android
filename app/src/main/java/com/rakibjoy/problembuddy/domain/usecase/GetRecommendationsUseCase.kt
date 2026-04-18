@@ -34,6 +34,15 @@ class GetRecommendationsUseCase @Inject constructor(
         val userInfo = userInfoFresh.value
         val tier = Tier.forMaxRating(userInfo.maxRating ?: userInfo.rating ?: 0)
 
+        // "Difficulty offset" setting shifts the default recommendation window
+        // around the user's *current* rating. Explicit filter bounds override it.
+        val difficultyOffset = settingsStore.difficultyOffset.first()
+        val baselineRating = userInfo.rating ?: userInfo.maxRating
+        val effectiveMinRating = filters.minRating
+            ?: baselineRating?.let { it + difficultyOffset - RATING_WINDOW_BELOW }
+        val effectiveMaxRating = filters.maxRating
+            ?: baselineRating?.let { it + difficultyOffset + RATING_WINDOW_ABOVE }
+
         val statusResult = codeforces.userStatusWithFallback(handle, 1, 100_000)
         val statusFresh = statusResult.getOrElse { return Result.failure(it) }
         val submissions = statusFresh.value
@@ -80,8 +89,8 @@ class GetRecommendationsUseCase @Inject constructor(
             .filter { (e, _) -> e.id !in excludedProblemIds }
             .filter { (_, p) ->
                 val rating = p.rating
-                if (filters.minRating != null && (rating == null || rating < filters.minRating)) return@filter false
-                if (filters.maxRating != null && (rating == null || rating > filters.maxRating)) return@filter false
+                if (effectiveMinRating != null && (rating == null || rating < effectiveMinRating)) return@filter false
+                if (effectiveMaxRating != null && (rating == null || rating > effectiveMaxRating)) return@filter false
                 true
             }
             .filter { (_, p) ->
@@ -98,5 +107,13 @@ class GetRecommendationsUseCase @Inject constructor(
             .toList()
 
         return Result.success(RecommendationsResult(problems = filtered, stale = stale))
+    }
+
+    private companion object {
+        // "Slightly below" → 100 under current rating. "Slightly above" → 200.
+        // These match the classic CP practice advice to work in a narrow window
+        // just above the user's own rating.
+        const val RATING_WINDOW_BELOW = 100
+        const val RATING_WINDOW_ABOVE = 200
     }
 }

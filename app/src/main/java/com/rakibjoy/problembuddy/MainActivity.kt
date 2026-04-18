@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -96,11 +96,11 @@ private fun BrandedSplash() {
                             .background(orb),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
+                        // decorative — app launcher icon
+                        androidx.compose.foundation.Image(
+                            painter = painterResource(R.drawable.ic_launcher_foreground),
                             contentDescription = null,
-                            tint = primary,
-                            modifier = Modifier.size(64.dp),
+                            modifier = Modifier.size(120.dp),
                         )
                     }
                     Spacer(Modifier.height(16.dp))

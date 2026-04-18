@@ -1,9 +1,14 @@
 # ProblemBuddy Android
 
-A native Kotlin Android app that helps Codeforces users pick their next problem. It
-identifies your weak topics from your solved set and recommends problems from an
-on-device corpus of strong handles' submissions — **no backend**, everything runs on
-the device.
+A native Kotlin Android app that helps Codeforces users pick their next problem.
+
+**The core idea: learn from who you look up to.** Pick a Codeforces handle you
+find inspiring — `tourist`, `jiangly`, your favorite Red — and ProblemBuddy
+pulls their accepted problems into your local library. Your recommendations
+are then tuned to that level, gently pushing you toward the kind of problems
+they solve. It builds a local picture of your practice — solved problems, weak
+topics, contest history, daily streak — and ranks the corpus against your
+weaknesses. No account, no server, no tracking. Everything runs on your device.
 
 This is the Android port of the web app at
 [TheRakibJoy/ProblemBuddy](https://github.com/TheRakibJoy/ProblemBuddy) (Django +
@@ -11,8 +16,6 @@ React). Same recommendation logic, now running entirely on your phone.
 
 Idea and original project by **[RakibJoy](https://codeforces.com/profile/RakibJoy)**.
 
-> Status: feature-complete through the build guide in
-> [`app/Implementation Plan.md`](app/Implementation%20Plan.md).
 > Release APKs are published automatically to the [`downloads`](../../tree/downloads)
 > branch of this repo on every push to `main`.
 
@@ -23,46 +26,88 @@ Idea and original project by **[RakibJoy](https://codeforces.com/profile/RakibJo
 3. Open the APK. Android will prompt you to allow installs from your browser
    (one-time). Tap **Install**.
 
-The APK is signed with a debug key, so Android will show an "unknown source"
-warning. That's expected for direct side-loading and does not affect functionality.
-Minimum supported OS is **Android 8.0 (API 26)**.
+The APK is signed with a debug key, so Android shows an "unknown source" warning
+— expected for side-loading. Minimum supported OS is **Android 8.0 (API 26)**.
 
-## Features
+## Screens
 
-- **Onboarding**: enter your Codeforces handle; validated against
+- **Onboarding** — enter your Codeforces handle; validated against
   `GET /api/user.info` before you can continue.
-- **Train**: seed the on-device corpus by ingesting submissions of strong handles.
-  Runs in a foreground `WorkManager` worker with a progress notification.
-- **Recommend**: given your solved set and the corpus, the app computes your weak
-  tags per tier and ranks unsolved problems by cosine similarity of tag vectors.
-  Filter by rating range, include/exclude tags, and problems-per-load.
-- **Profile**: tier ladder (Pupil → Legendary GM) plus weak-tag coverage bars.
-- **Settings**: theme (System/Light/Dark), recommendations per load, difficulty
-  offset, reset corpus, delete all data.
-- **Offline resilience**: `userInfo` and `userStatus` responses are persisted in
-  Room; if Codeforces is unreachable, the app falls back to cached data and shows
-  a "Offline data" banner with the cache age.
+- **Home** — dashboard: upcoming contest countdown (registers via
+  `contest.list`), streak-at-risk banner, rating / solved / streak stats,
+  progress-to-next-tier pill, weekly goal progress, **problem of the day** card,
+  today's picks, upsolve queue placeholder, "due for review" list, rotating tip.
+- **Recommend** — ranked problem list with left-rail rating, tier accent bar,
+  tag chips. Swipe right to open, swipe left to skip; buttons for Solve / Mark
+  Solved / Skip. Filter sheet with chip-based include/exclude tag selection,
+  rating range, weak-only toggle, count. Staleness banner when data is cached.
+- **Train** — framed as *"learn from who you look up to"*: enter a handle you're
+  inspired by and the app pulls their accepted problems into your local library,
+  tuning recommendations toward that level. Shows a **corpus overview** (total
+  problems, distinct tags, handle count, by-difficulty histogram), a live-
+  validated handle input, progress card for the active ingest, and a list of
+  previously-trained handles with re-sync / remove actions.
+- **Profile** — hero with handle + tier badge + 3-stat row. Four tabs:
+  1. **Tier ladder** — full vertical CF ladder, tier you're at is highlighted.
+  2. **Weak tags** — coverage bars driven by `ComputeWeakTagsUseCase`.
+  3. **Activity** — submissions heatmap (26 weeks), streak stats, full rating
+     timeline, recent-contests list, division deltas, tier-stacked area,
+     8-spoke tag radar, first-attempt AC rate, 90-day verdict breakdown,
+     recently-failed problems, day-of-week + hour-of-day charts, language
+     distribution, rated vs virtual counts, milestones feed, projected
+     tier-ETA, one-year-ago snapshot.
+  4. **Compare** — type another handle; see side-by-side rating and tier.
+- **Settings** — appearance (theme), recommendations (per-load count, difficulty
+  offset), goals (weekly solve target), notifications (daily problem reminder
+  with time picker, hour + minute), data (reset corpus, delete all data),
+  about (handle attribution + version + GitHub link).
+
+## Key features
+
+- **Codeforces-accurate tier colors and rating bands.** Newbie `#808080` through
+  Legendary `#FF0000` match the site exactly. Legendary handles render with the
+  first character in black per the CF convention.
+- **Daily problem of the day** — deterministic per (date, handle), cached in
+  DataStore. Same problem all day; rolls over at local midnight.
+- **Daily notification** — opt-in `PeriodicWorkRequest` that fires at a user-
+  chosen hour + minute via a `TimePicker`. Posts a notification with one
+  recommended problem; tap opens it in the browser.
+- **Spaced-repetition review queue** — when you mark a problem solved, it's
+  scheduled for re-review using Leitner boxes (intervals 1 / 3 / 7 / 14 / 30 /
+  90 days). Due problems surface on Home.
+- **Incremental submission sync** — `user.status` is pulled in 100-item pages
+  using a per-handle checkpoint, so active users don't re-download 10k+
+  submissions on every refresh.
+- **Offline resilience** — `userInfo`, `userStatus`, and upcoming contests are
+  persisted in Room; if Codeforces is unreachable, the app falls back to cached
+  data and shows a stale-data banner with age.
+- **Weekly goal** — set a target, Home shows your progress against it.
+- **Compare against another handle** — side-by-side rating and tier, opens the
+  other user's CF profile in one tap.
 
 ## Stack
 
 | Concern | Choice |
 | --- | --- |
 | Language | Kotlin 2.0.21 |
-| UI | Jetpack Compose + Material 3 |
+| UI | Jetpack Compose + Material 3 (Compose BOM 2024.10.01) |
 | DI | Hilt 2.52 (KSP) |
-| Local DB | Room 2.6.1 + auto-migrations |
+| Local DB | Room 2.6.1 with auto-migrations v1 → v2 → v3 |
 | Preferences | DataStore (Preferences) |
 | Background work | WorkManager 2.9.1 + Hilt Worker |
 | HTTP | Retrofit 2.11 + OkHttp 4.12 + kotlinx.serialization 1.7.3 |
+| Images | Coil 2.7 (Codeforces avatar loading) |
 | Async | Coroutines + Flow |
-| Navigation | androidx.navigation.compose 2.8 (type-safe) |
-| Testing | JUnit 5 (unit) + MockK + Turbine; Compose UI Test + Room `MigrationTestHelper` (instrumented) |
+| Navigation | androidx.navigation.compose 2.8 (type-safe destinations) |
+| Typography | `FontFamily.Monospace` (system) |
+| Telemetry | Firebase Analytics (always on), Firebase Crashlytics (release only) |
+| Testing | JUnit 5 + MockK + Turbine (unit); Compose UI Test + Room `MigrationTestHelper` (instrumented) |
 | Min / Target SDK | 26 / 35 |
 
 ## Architecture
 
-Three layers with unidirectional data flow. MVI lives in the UI layer; domain and
-data are plain Kotlin + Coroutines.
+Three layers with unidirectional data flow. MVI lives in the UI layer; domain
+and data are plain Kotlin + Coroutines.
 
 ```
 ┌─────── UI (Compose + MVI) ────────┐
@@ -75,10 +120,11 @@ data are plain Kotlin + Coroutines.
 └──────────── Domain ───────────────┘
 │  UseCase: suspend invoke(): Result │
 │  Pure models: Problem, Tier,       │
-│  WeakTag, TrainingJob, Filters…    │
+│  Filters, TrainingJob, Review,     │
+│  ActivityStats, RatingPoint…       │
 └──────────── Data ─────────────────┘
 │  Repository (interface in domain)  │
-│     ├── Room DAO                   │
+│     ├── Room DAOs                  │
 │     ├── Retrofit CodeforcesApi     │
 │     └── DataStore<Preferences>     │
 └────────────────────────────────────┘
@@ -95,28 +141,38 @@ data are plain Kotlin + Coroutines.
 ```
 app/src/main/java/com/rakibjoy/problembuddy/
 ├── ProblemBuddyApp.kt            # @HiltAndroidApp + WorkManager Configuration.Provider
+│                                 # + Firebase Analytics / Crashlytics init
 ├── MainActivity.kt               # Theme + NavHost host
 ├── Navigation.kt                 # Type-safe destinations + bottom bar
 ├── AppRootViewModel.kt           # Decides Onboarding vs Home at launch
 │
 ├── core/
-│   ├── network/                  # CodeforcesApi, DTOs, NetworkModule
-│   ├── database/                 # Room entities, DAOs, DatabaseModule
+│   ├── network/                  # CodeforcesApi, DTOs (incl. ContestDto), NetworkModule
+│   ├── database/                 # Room entities, DAOs, DatabaseModule (v3)
 │   ├── datastore/                # SettingsStore, DataStoreModule
-│   ├── work/                     # IngestWorker + IngestScheduler
+│   ├── work/                     # IngestWorker + IngestScheduler,
+│   │                             # DailyProblemWorker + DailyProblemScheduler + Notifier
 │   └── ui/
-│       ├── theme/                # Material 3 theme respecting ThemeMode
-│       └── components/           # StaleDataBanner, EmptyCorpusCard
+│       ├── theme/                # Material 3 theme, TierColors (CF-accurate),
+│       │                         # AppTokens, Spacing, Shape, Elevation
+│       └── components/           # Wordmark, AppTopBar, RatingRail, TagChip,
+│                                 # HandleText, HandleAvatar, TierBadge,
+│                                 # ActivityHeatmap, TagRadar, VerdictBar,
+│                                 # FullRatingTimeline, UpcomingContestCard,
+│                                 # StreakRiskBanner, NextTierProgress,
+│                                 # DailyProblemCard, ReviewDueRow, etc.
 │
 ├── domain/                       # Pure Kotlin; no Android/androidx imports
-│   ├── model/                    # Problem, Tier, Filters, TrainingJob, …
+│   ├── model/                    # Problem, Tier, Filters, TrainingJob,
+│   │                             # UpcomingContest, Review, Submission,
+│   │                             # RatingChange, UserInfo, Fresh, …
 │   ├── repository/               # Interfaces
 │   ├── usecase/                  # IngestHandleUseCase, ComputeWeakTagsUseCase,
-│   │                             # GetRecommendationsUseCase, …
+│   │                             # GetRecommendationsUseCase, GetTodayProblemUseCase, …
 │   └── util/                     # HandleValidator
 │
 ├── data/
-│   ├── repository/               # Impls (CodeforcesRepositoryImpl, …)
+│   ├── repository/               # Impls with incremental sync + persistent cache
 │   ├── mapper/                   # DTO ↔ domain, Entity ↔ domain
 │   ├── cache/                    # PersistedModels for offline fallback
 │   ├── recommender/              # TierIndex (cosine ranking)
@@ -133,13 +189,41 @@ app/src/main/java/com/rakibjoy/problembuddy/
 
 ## Recommendation algorithm
 
-- Tag vocabulary is built per tier from the corpus (`data/recommender/TierIndex.kt`).
-- Each problem becomes a 0/1 bag-of-words vector over that vocabulary.
-- A "query" vector is the set of the user's weak tags. Cosine similarity picks the
-  top-ranked unsolved problems.
-- Weak tags (`domain/usecase/ComputeWeakTagsUseCase.kt`) are computed per tier:
-  `coverage = solved_by_user / available_in_corpus`, ascending, with a minimum
-  corpus-count threshold so tiny tag buckets don't dominate.
+1. Handle-tier: `Tier.forMaxRating(userInfo.maxRating ?: rating ?: 0)`.
+2. **Difficulty window** (actually enforced): if no explicit filter, the use
+   case computes `[rating + offset − 100, rating + offset + 200]` — the
+   classic CP "slightly above your rating" practice rule. Settings' difficulty
+   offset shifts the window.
+3. Weak tags via `ComputeWeakTagsUseCase`: `coverage = solved / corpus`,
+   ascending, top 10, with a minimum corpus-count threshold so tiny tag
+   buckets don't dominate.
+4. `TierIndex.build(problems)` builds a bag-of-words vector per problem.
+5. `rank(weakTags)` returns problem indices sorted by cosine similarity.
+6. Filters applied in order: solved set, interactions (solved / skipped /
+   hidden), rating window, include tags, exclude tags, `weakOnly`.
+7. Take `filters.count`.
+
+## Codeforces rating bands
+
+Matched to the site exactly:
+
+| Tier | Range |
+| --- | --- |
+| Newbie | `< 1200` |
+| Pupil | `1200–1399` |
+| Specialist | `1400–1599` |
+| Expert | `1600–1899` |
+| Candidate Master | `1900–2099` |
+| Master | `2100–2299` |
+| International Master | `2300–2399` |
+| Grandmaster | `2400–2599` |
+| International Grandmaster | `2600–2999` |
+| Legendary Grandmaster | `3000+` |
+
+Tier color is canonical Codeforces hex (gray, green, cyan, blue, magenta,
+orange, red). Master/Intl Master share the same orange and GM/IGM share the
+same red — as on the site. Legendary handles render their first character in
+black over the red, also matching CF.
 
 ## Building locally
 
@@ -154,7 +238,11 @@ app/src/main/java/com/rakibjoy/problembuddy/
 Release builds enable R8 minification and resource shrinking. See
 [`app/proguard-rules.pro`](app/proguard-rules.pro) for the kept classes —
 kotlinx.serialization DTOs, Retrofit service interfaces (R8 full-mode recipe),
-the `IngestWorker`, etc.
+the `IngestWorker` and `DailyProblemWorker`, etc.
+
+Firebase requires `app/google-services.json` to be present. The checked-in file
+ships with the project; replace it with your own Firebase project config if
+you're forking.
 
 ### Requirements
 
@@ -168,23 +256,27 @@ Open `settings.gradle.kts` at the repo root in Android Studio Ladybug or newer.
 
 Unit tests (`app/src/test/`):
 
-- `Tier.forMaxRating` parametrised over every tier boundary.
+- `Tier.forMaxRating` parametrised over every CF rating boundary (19+ cases).
 - `TierIndex` cosine ranking with fixture corpora.
 - `ComputeWeakTagsUseCase` ordering + minimum corpus-count filtering.
-- `GetRecommendationsUseCase` end-to-end with mocked repositories.
+- `GetRecommendationsUseCase` end-to-end with mocked repositories, includes
+  difficulty-offset path.
 - `HandleValidator` for the shared handle regex.
-- `CodeforcesMappers`, `ProblemMappers`, `TrainingJobMappers`.
+- `CodeforcesMappers` — all DTO → domain fields, protocol-relative avatar URL
+  normalization, `ContestDto.toUpcoming()` parsing.
+- `ProblemMappers`, `TrainingJobMappers`.
 
 Instrumentation tests (`app/src/androidTest/`):
 
-- `RecommendScreenTest` — skeleton state, problem cards render, filter IconButton
-  emits the right intent, Mark-Solved removes the card.
-- `ProblemBuddyDatabaseMigrationTest` — Room v1 → v2 auto-migration preserves
+- `RecommendScreenTest` — skeleton state, problem cards render, filter
+  IconButton emits the right intent, Mark-Solved (via overflow) removes the
+  card.
+- `ProblemBuddyDatabaseMigrationTest` — Room v1 → v2 migration preserves
   existing rows and adds the `cached_payloads` table.
 
 ## CI
 
-Two GitHub Actions workflows in [`.github/workflows/`](.github/workflows):
+Three GitHub Actions workflows in [`.github/workflows/`](.github/workflows):
 
 1. **`android.yml`** — on every push/PR to `main`:
    - Job 1: assemble debug + run unit tests + compile instrumentation tests.
@@ -200,21 +292,26 @@ Two GitHub Actions workflows in [`.github/workflows/`](.github/workflows):
 
 ## Privacy
 
-- Your Codeforces handle is stored in DataStore on-device.
-- The app makes public, read-only calls to `codeforces.com/api/`. Nothing is
-  sent anywhere else.
-- Training submissions and the resulting corpus stay on-device in a Room database.
+- Your Codeforces handle, corpus, interactions, reviews, and settings stay
+  on-device in Room and DataStore.
+- The app makes public, read-only calls to `codeforces.com/api/`. Nothing from
+  your practice history leaves the device to anywhere else.
+- Firebase Analytics is on to understand aggregate feature usage (screen
+  names, button taps). Firebase Crashlytics is on in release builds only to
+  collect stack traces of crashes. Neither sends your Codeforces handle,
+  submissions, or corpus.
 
 ## Contributing
 
 The single source of truth for the architecture and implementation order is
-[`app/Implementation Plan.md`](app/Implementation%20Plan.md). Read it before making
-non-trivial changes.
+[`app/Implementation Plan.md`](app/Implementation%20Plan.md). Read it before
+making non-trivial changes.
 
 House rules (from `Implementation Plan.md` §8):
 
 1. No `android.*` / `androidx.*` imports in `domain/`. Domain is pure Kotlin.
-2. State mutates only through `_state.update { … }` inside the ViewModel reducer.
+2. State mutates only through `_state.update { … }` inside the ViewModel
+   reducer.
 3. All IO/DB/network is `suspend` and dispatched to `Dispatchers.IO` at the
    repository boundary — never on the main thread.
 4. `domain.model.Tier` is the only source of truth for rating thresholds.
@@ -222,8 +319,9 @@ House rules (from `Implementation Plan.md` §8):
 
 ## Credits
 
-- **Concept, algorithms, and web app** by [RakibJoy](https://codeforces.com/profile/RakibJoy)
-  — see the original Django + React implementation at
+- **Concept, algorithms, and web app** by
+  [RakibJoy](https://codeforces.com/profile/RakibJoy) — see the original Django
+  + React implementation at
   [TheRakibJoy/ProblemBuddy](https://github.com/TheRakibJoy/ProblemBuddy).
 - Android port developed against the architecture in
   [`app/Implementation Plan.md`](app/Implementation%20Plan.md).

@@ -21,12 +21,34 @@ Core flows (match the web app):
 1. **Onboarding**: user types their Codeforces handle; we validate it via
    `GET /api/user.info`.
 2. **Train**: user seeds the on-device problem corpus by ingesting
-   submissions of strong handles (`tourist`, `Um_nik`, …). Runs once; can
-   be re-run to refresh.
+   submissions of strong handles (`tourist`, `Um_nik`, …). Shows a corpus
+   overview (total problems, tags, handles, by-difficulty histogram) and a
+   list of previously-trained handles with re-sync / remove actions.
 3. **Recommend**: given the user's solved set and the corpus, compute weak
    tags and return unsolved problems ranked by cosine similarity of tags.
-4. **Profile**: tier ladder (Pupil → Legendary GM) + weak-tag bars.
-5. **Settings**: theme, recs per load, difficulty offset, reset corpus.
+   Enforces a difficulty window `[rating + offset − 100, rating + offset + 200]`
+   by default; swipe right to open, swipe left to skip.
+4. **Profile**: hero + 4 tabs — tier ladder, weak tags, activity (heatmap,
+   rating timeline, tag radar, verdict bar, failed-problem queue, milestones,
+   tier projection, 1-year-ago snapshot), compare-with-handle.
+5. **Home**: dashboard — upcoming contest countdown (`contest.list`),
+   streak-at-risk banner, rating/solved/streak stats, next-tier progress
+   pill, weekly-goal progress, problem of the day, today's picks, due-for-
+   review list, upsolve queue, rotating tip.
+6. **Settings**: appearance, recommendations, goals, notifications (daily
+   problem reminder with hour + minute picker), data ops, about.
+
+**Spaced-repetition review queue**: when a user marks a problem solved, it
+enters a Leitner review schedule (boxes 0–5 with intervals 1/3/7/14/30/90
+days). Problems whose `nextReviewAt` is due surface on Home.
+
+**Daily problem**: one problem per (date, handle), cached via DataStore,
+shown on Home and optionally fired as a notification via `WorkManager` at a
+user-chosen local time.
+
+**Incremental submission sync**: `user.status` is pulled in pages of 100
+using a per-handle `lastSubmissionId` checkpoint; only new submissions are
+merged with the cached list.
 
 See the Python implementations for exact algorithms:
 
@@ -47,13 +69,18 @@ See the Python implementations for exact algorithms:
 | Local DB | **Room** + KSP | SQLite with compile-time query validation |
 | Preferences | **DataStore (Preferences)** | Structured, coroutine-native |
 | HTTP | **Retrofit + OkHttp + kotlinx.serialization** | Idiomatic, minimal footprint |
+| Images | **Coil** (Compose integration) | Avatar loading from Codeforces `titlePhoto` |
 | Async | **Coroutines + Flow** | Structured concurrency baked into every layer |
 | Navigation | **androidx.navigation.compose** (type-safe) | Standard, integrates with Hilt |
-| Testing | **JUnit 5 + MockK + Turbine** (unit) + **Compose UI Test** (screen) | Low ceremony, coroutine-aware |
+| Telemetry | **Firebase Analytics + Crashlytics** | Analytics always on; Crashlytics release-only |
+| Testing | **JUnit 5 + MockK + Turbine** (unit) + **Compose UI Test** + **Room `MigrationTestHelper`** | Low ceremony, coroutine-aware |
 
 **Avoid** unless you hit a concrete need: Dagger (use Hilt), RxJava, LiveData
 (use Flow), Moshi (use kotlinx.serialization), MockK + Mockito mixing,
 Gradle Groovy (use Kotlin DSL).
+
+**Typography** ships with `FontFamily.Monospace` (system) so no network is
+required for first paint; Google Fonts may be wired back in later if needed.
 
 ---
 
@@ -430,22 +457,63 @@ up. Previews use a hand-constructed state for instant rendering.
 
 ### Phase 7 — Tests & CI (days 13–14)
 
-- **Unit** (`src/test`): tier math, weak-tag computation, ranking, all
-  mappers, handle validation.
-- **Compose** (`src/androidTest`): RecommendScreen renders skeletons then
-  cards; filter change triggers refresh; MarkSolved removes a card.
-- **Room migration** tests once you have a v2.
-- GitHub Actions: matrix (api-level 29 + 34) with
-  `./gradlew testDebugUnitTest connectedDebugAndroidTest`.
-  Use Google Reactive's emulator runner or KSP-only unit slice to keep
-  CI under 10 minutes.
+- **Unit** (`src/test`): tier math, weak-tag computation, cosine ranking,
+  mappers (codeforces / problem / training-job), handle validation,
+  recommendation end-to-end.
+- **Compose** (`src/androidTest`): `RecommendScreenTest` — skeleton state,
+  cards render, filter icon emits intent, overflow "Mark solved" removes card.
+- **Room migration** (`src/androidTest`): `ProblemBuddyDatabaseMigrationTest`
+  asserts v1 → v2 preserves rows and adds `cached_payloads`.
+- GitHub Actions: two workflows.
+  1. `android.yml` — assemble debug + unit tests + instrumentation-compile on
+     every push/PR; connected tests in an emulator matrix over API 29 & 34
+     via `reactivecircus/android-emulator-runner` with AVD caching.
+  2. `publish-apk.yml` — release APK pushed to an orphan `downloads` branch
+     as `ProblemBuddy-latest.apk` + sha-pinned name + README.
 
 ### Phase 8 — Release prep (day 15)
 
-- Signing config from environment variables (no keystores in git).
-- R8 enabled; confirm Compose keeps + Retrofit/Hilt keeps in
-  `proguard-rules.pro`.
-- `./gradlew bundleRelease` → AAB ready for Play Console upload.
+- Release signed with the debug keystore for side-loading (no store
+  distribution). If you later want Play-Store signing, add a `signingConfig`
+  driven by env vars / GitHub Secrets.
+- R8 enabled; `proguard-rules.pro` ships keeps for kotlinx.serialization
+  DTOs, Retrofit service interfaces (R8 full-mode recipe), `IngestWorker`
+  and `DailyProblemWorker`.
+- `./gradlew assembleRelease` → APK ready for GitHub `downloads` branch.
+
+### Phase 9 — Activity history & daily engagement (post-MVP)
+
+- **Daily problem of the day** (`GetTodayProblemUseCase`): deterministic per
+  (date, handle), cached in DataStore, surfaced on Home and optionally via
+  notification.
+- **Daily notification worker** (`DailyProblemWorker` + `DailyProblemScheduler`):
+  PeriodicWorkRequest, user-chosen hour + minute (TimePicker), channel
+  `daily_problem`, POST_NOTIFICATIONS permission handshake on Android 13+.
+- **Spaced-repetition review queue** (`ReviewEntity` + `ReviewRepository`):
+  Leitner boxes 0–5 with intervals 1/3/7/14/30/90 days, scheduled on
+  MarkSolved, surfaced on Home.
+- **Activity analytics** (`ProfileViewModel.buildActivityStats`): heatmap,
+  streak/longest/this-year, rating timeline, recent contests, division deltas,
+  tier stacked area, tag radar (8 canonical tags), first-attempt AC rate,
+  verdict breakdown, failed queue, day-of-week + hour-of-day, language mix,
+  rated vs virtual counts, milestones, tier projection, 1-year-ago snapshot.
+- **Upcoming contest countdown** (`CodeforcesApi.contestList`, 15-min TTL):
+  `UpcomingContestCard` with live countdown + register action.
+- **Incremental sync**: per-handle checkpoint in DataStore; pages of 100 merged
+  against the persistent cache.
+- **Compare with another handle**: profile tab with text field + side-by-side
+  rating/tier card.
+- **Home dashboard additions**: streak-at-risk banner, next-tier progress
+  pill, weekly-goal card.
+
+### Phase 10 — Firebase integration (post-MVP)
+
+- `google-services.json` in `app/`, Google Services + Crashlytics Gradle
+  plugins.
+- `Firebase.analytics.setAnalyticsCollectionEnabled(true)` on app start —
+  both debug and release.
+- `Firebase.crashlytics.isCrashlyticsCollectionEnabled = !BuildConfig.DEBUG`
+  so local crashes don't pollute the production dashboard.
 
 ---
 
@@ -472,16 +540,25 @@ When in doubt about an algorithm or UX, consult the web implementation:
 
 | Web concern | Android port reference |
 | --- | --- |
-| `Dataset/constants.py::RATING_TIERS` | `domain.model.Tier` |
-| `Dataset/codeforces.py::user_info` | `CodeforcesApi.userInfo` + repo cache |
-| `Dataset/add_data.py::ingest_handle` | `IngestHandleUseCase` |
-| `Recommender/problem_giver.py::recommend` | `GetRecommendationsUseCase` + `TierIndex` |
+| `Dataset/constants.py::RATING_TIERS` | `domain.model.Tier` (CF-accurate bands + colors) |
+| `Dataset/codeforces.py::user_info` | `CodeforcesApi.userInfo` + repo cache + `Fresh<T>` offline fallback |
+| `Dataset/add_data.py::ingest_handle` | `IngestHandleUseCase` + `IngestWorker` |
+| `Recommender/problem_giver.py::recommend` | `GetRecommendationsUseCase` + `TierIndex` (+ difficulty window) |
 | `Recommender/weak_tags.py::get_weak_tags` | `ComputeWeakTagsUseCase` |
-| `frontend/src/recommend/RecommendPage.tsx` | `feature.recommend.RecommendScreen` |
-| `frontend/src/profile/TierLadder.tsx` | `feature.profile.TierLadderSection` |
-| `frontend/src/train/TrainingWatcher.tsx` | `feature.train.TrainProgressCard` |
+| `frontend/src/recommend/RecommendPage.tsx` | `feature.recommend.RecommendScreen` (swipe-able) |
+| `frontend/src/profile/TierLadder.tsx` | `feature.profile.ProfileScreen` + `VerticalTierLadder` |
+| `frontend/src/train/TrainingWatcher.tsx` | `feature.train.TrainScreen` (corpus overview + history) |
 
-If you add a new algorithm here first, port it back to Python too so both
+Features that don't have a web equivalent (Android-original):
+
+- Spaced-repetition review queue (`ReviewRepository`, Leitner boxes)
+- Daily problem notification (`DailyProblemWorker`)
+- Incremental `user.status` sync with per-handle checkpoint
+- Activity analytics suite (`ActivityStats` + 15+ derived views)
+- Upcoming-contest countdown + Home dashboard (streak risk, next-tier pill)
+- Compare-with-handle on Profile
+
+If you add a new algorithm here, consider porting back to Python so both
 clients stay aligned.
 
 ---
