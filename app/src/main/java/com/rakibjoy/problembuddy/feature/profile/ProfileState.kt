@@ -13,6 +13,8 @@ data class ProfileState(
     val error: String? = null,
     val stale: Boolean = false,
     val fetchedAtMillis: Long? = null,
+    val problemsSolved: Int? = null,
+    val coveragePct: Int? = null,
 )
 
 data class WeakTagStat(val tag: String, val coverage: Float)

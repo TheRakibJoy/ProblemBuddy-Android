@@ -11,27 +11,26 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,19 +52,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
 import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
-import com.rakibjoy.problembuddy.core.ui.components.TierBadge
 import com.rakibjoy.problembuddy.core.ui.components.pressScale
-import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
-import com.rakibjoy.problembuddy.domain.model.ThemeMode
 import com.rakibjoy.problembuddy.core.ui.theme.Spacing
+import com.rakibjoy.problembuddy.core.ui.theme.appExtras
 import com.rakibjoy.problembuddy.core.ui.theme.gradient
 import com.rakibjoy.problembuddy.core.ui.theme.palette
+import com.rakibjoy.problembuddy.domain.model.ThemeMode
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.model.TrainingJob
 
@@ -101,16 +100,16 @@ fun TrainScreen(
     GradientSurface {
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { AppTopBar(title = "Training") },
+            topBar = { AppTopBar() },
         ) { padding ->
             Column(
                 modifier = Modifier
                     .padding(padding)
-                    .padding(Spacing.lg)
+                    .padding(16.dp)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
-                HeroCard()
+                IntroBlock()
                 HandleField(
                     value = state.handleInput,
                     validation = state.handleValidation,
@@ -121,23 +120,27 @@ fun TrainScreen(
                         onClick = { onIntent(TrainIntent.CancelClicked) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
                             .pressScale(0.97f),
-                        shape = AppShapes.medium,
-                    ) { Text("Cancel training") }
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+                    ) { Text("cancel training") }
                 } else {
                     Button(
                         onClick = { onIntent(TrainIntent.StartClicked) },
                         enabled = state.startEnabled,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
                             .pressScale(0.97f),
-                        shape = AppShapes.medium,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
                     ) {
                         Text(
-                            text = "Start training",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            text = "start training",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                         )
                     }
                 }
@@ -160,40 +163,28 @@ fun TrainScreen(
 }
 
 @Composable
-private fun HeroCard() {
-    val brush = Brush.linearGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.secondary,
-        ),
-    )
-    val onColor = MaterialTheme.colorScheme.onPrimary
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(AppShapes.large)
-            .background(brush)
-            .padding(Spacing.lg),
+private fun IntroBlock() {
+    val extras = MaterialTheme.appExtras
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            // decorative
-            Icon(
-                imageVector = Icons.Default.Bolt,
-                contentDescription = null,
-                tint = onColor,
-                modifier = Modifier.size(40.dp),
-            )
-            Text(
-                "Build your corpus",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = onColor,
-            )
-            Text(
-                "Ingest strong handles' submissions to power recommendations.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = onColor.copy(alpha = 0.85f),
-            )
-        }
+        Text(
+            text = "TRAIN",
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.3.sp,
+            color = extras.textTertiary,
+        )
+        Text(
+            text = "build your corpus",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            text = "ingest strong handles' submissions to power recommendations.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = extras.textSecondary,
+        )
     }
 }
 
@@ -204,32 +195,42 @@ private fun HandleField(
     validation: HandleValidation,
     onValueChange: (String) -> Unit,
 ) {
+    val extras = MaterialTheme.appExtras
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text("Codeforces handle") },
+        label = { Text("codeforces handle") },
         singleLine = true,
         isError = validation is HandleValidation.Invalid,
         leadingIcon = {
             // decorative
             Icon(Icons.Default.Person, contentDescription = null)
         },
-        shape = AppShapes.medium,
+        shape = RoundedCornerShape(10.dp),
         supportingText = {
             AnimatedContent(
                 targetState = validation,
                 label = "handle-validation",
             ) { v ->
                 when (v) {
-                    HandleValidation.Idle -> Text(" ")
-                    HandleValidation.Validating -> Text("Checking…")
+                    HandleValidation.Idle -> Text(
+                        text = " ",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    HandleValidation.Validating -> Text(
+                        text = "checking\u2026",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = extras.textSecondary,
+                    )
                     HandleValidation.Valid -> Text(
-                        "✓ Handle OK",
-                        color = MaterialTheme.colorScheme.primary,
+                        text = "\u2713 handle ok",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = extras.deltaPositive,
                     )
                     is HandleValidation.Invalid -> Text(
-                        v.reason,
-                        color = MaterialTheme.colorScheme.error,
+                        text = v.reason,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = extras.deltaNegative,
                     )
                 }
             }
@@ -240,103 +241,86 @@ private fun HandleField(
 
 @Composable
 private fun ActiveJobCard(job: TrainingJob, onCancel: () -> Unit) {
+    val extras = MaterialTheme.appExtras
     val tier = job.currentTier
-    val accent = tier?.palette()?.strong ?: MaterialTheme.colorScheme.primary
     val running = job.status == TrainingJob.Status.RUNNING ||
         job.status == TrainingJob.Status.QUEUED
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(extras.surfaceElevated)
+            .border(0.5.dp, extras.borderSubtle, RoundedCornerShape(10.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Tier-tinted left bar
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(accent),
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            StatusDot(status = job.status)
+            Spacer(Modifier.width(Spacing.sm))
+            Text(
+                text = "training ${job.handle}",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            Column(
+        }
+        val tierName = tier?.name?.lowercase()?.replace('_', ' ')
+        val subLine = when {
+            tierName != null && job.total > 0 -> "$tierName · ${job.done}/${job.total}"
+            tierName != null -> tierName
+            job.total > 0 -> "${job.done}/${job.total}"
+            else -> job.status.label()
+        }
+        Text(
+            text = subLine,
+            style = MaterialTheme.typography.labelSmall,
+            color = extras.textTertiary,
+        )
+        val progress = if (job.total > 0) {
+            job.done.toFloat() / job.total.toFloat()
+        } else if (running) {
+            -1f
+        } else {
+            0f
+        }
+        AnimatedProgressBar(
+            progress = progress,
+            accentBrush = tier?.gradient() ?: Brush.horizontalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.secondary,
+                ),
+            ),
+        )
+        if (job.status == TrainingJob.Status.FAILED && !job.error.isNullOrBlank()) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusDot(status = job.status)
-                    Spacer(Modifier.width(Spacing.sm))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Training ${job.handle}",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        )
-                        Text(
-                            text = job.status.label(),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                if (tier != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TierBadge(tier = tier, compact = true)
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text(
-                            text = "${job.done}/${job.total}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                val progress = if (job.total > 0) {
-                    job.done.toFloat() / job.total.toFloat()
-                } else if (running) {
-                    -1f
-                } else {
-                    0f
-                }
-                AnimatedProgressBar(
-                    progress = progress,
-                    accentBrush = tier?.gradient() ?: Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary,
-                        ),
-                    ),
+                // decorative
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(16.dp),
                 )
-                if (job.status == TrainingJob.Status.FAILED && !job.error.isNullOrBlank()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(AppShapes.small)
-                            .background(MaterialTheme.colorScheme.errorContainer)
-                            .padding(Spacing.sm),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // decorative
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text(
-                            job.error,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-                if (running) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        TextButton(onClick = onCancel) { Text("Cancel") }
-                    }
-                }
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    job.error,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        if (running) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onCancel) { Text("cancel") }
             }
         }
     }
@@ -344,11 +328,12 @@ private fun ActiveJobCard(job: TrainingJob, onCancel: () -> Unit) {
 
 @Composable
 private fun StatusDot(status: TrainingJob.Status) {
+    val extras = MaterialTheme.appExtras
     val color = when (status) {
         TrainingJob.Status.QUEUED -> MaterialTheme.colorScheme.primary
         TrainingJob.Status.RUNNING -> MaterialTheme.colorScheme.primary
-        TrainingJob.Status.SUCCESS -> Color(0xFF22C55E)
-        TrainingJob.Status.FAILED -> MaterialTheme.colorScheme.error
+        TrainingJob.Status.SUCCESS -> extras.deltaPositive
+        TrainingJob.Status.FAILED -> extras.deltaNegative
     }
     val isRunning = status == TrainingJob.Status.RUNNING
     val scale = if (isRunning) {
@@ -368,7 +353,7 @@ private fun StatusDot(status: TrainingJob.Status) {
     }
     Box(
         modifier = Modifier
-            .size(12.dp)
+            .size(10.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(color),
@@ -377,38 +362,40 @@ private fun StatusDot(status: TrainingJob.Status) {
 
 @Composable
 private fun SuccessBanner() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        ),
+    val extras = MaterialTheme.appExtras
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(extras.surfaceElevated)
+            .border(
+                BorderStroke(0.5.dp, extras.borderSubtle),
+                RoundedCornerShape(10.dp),
+            )
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // decorative
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
-            )
-            Spacer(Modifier.width(Spacing.sm))
-            Text(
-                "Corpus ready!",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            )
-        }
+        // decorative
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = extras.deltaPositive,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(Spacing.sm))
+        Text(
+            text = "corpus ready.",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
 private fun TrainingJob.Status.label(): String = when (this) {
-    TrainingJob.Status.QUEUED -> "Queued"
-    TrainingJob.Status.RUNNING -> "Running"
-    TrainingJob.Status.SUCCESS -> "Completed"
-    TrainingJob.Status.FAILED -> "Failed"
+    TrainingJob.Status.QUEUED -> "queued"
+    TrainingJob.Status.RUNNING -> "running"
+    TrainingJob.Status.SUCCESS -> "completed"
+    TrainingJob.Status.FAILED -> "failed"
 }
 
 @Preview(name = "Train - Idle", uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -498,7 +485,7 @@ private fun TrainScreenFailedPreview() {
                     currentTier = Tier.MASTER,
                     done = 17,
                     total = 120,
-                    error = "Codeforces is unreachable. Try again soon.",
+                    error = "codeforces is unreachable. try again soon.",
                     updatedAt = 0,
                 ),
                 startEnabled = true,

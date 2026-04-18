@@ -12,4 +12,10 @@ data class RecommendState(
     val hasCorpus: Boolean = true,
     val stale: Boolean = false,
     val fetchedAtMillis: Long? = null,
+    val weakTags: Set<String> = emptySet(),
+    val totalMatching: Int? = null,
+    /** Problem keys (contestId-index) the user has solved in this session. */
+    val solvedKeys: Set<String> = emptySet(),
+    /** Problem keys the user has skipped / saved for later. */
+    val skippedKeys: Set<String> = emptySet(),
 )

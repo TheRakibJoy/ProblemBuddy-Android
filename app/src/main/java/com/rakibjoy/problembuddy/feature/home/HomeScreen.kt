@@ -1,90 +1,69 @@
 package com.rakibjoy.problembuddy.feature.home
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
-import com.rakibjoy.problembuddy.core.ui.components.HandleText
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
 import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
-import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
-import com.rakibjoy.problembuddy.core.ui.components.SectionHeader
+import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
+import com.rakibjoy.problembuddy.core.ui.components.HandleText
+import com.rakibjoy.problembuddy.core.ui.components.RatingRail
+import com.rakibjoy.problembuddy.core.ui.components.SparklineCard
 import com.rakibjoy.problembuddy.core.ui.components.StatCard
-import com.rakibjoy.problembuddy.core.ui.components.pressScale
-import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
-import com.rakibjoy.problembuddy.core.ui.theme.Elevations
+import com.rakibjoy.problembuddy.core.ui.components.TagChip
+import com.rakibjoy.problembuddy.core.ui.components.UpsolveBadge
+import com.rakibjoy.problembuddy.core.ui.components.UpsolveCard
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
-import com.rakibjoy.problembuddy.core.ui.theme.Spacing
-import com.rakibjoy.problembuddy.core.ui.theme.gradient
-import com.rakibjoy.problembuddy.core.ui.theme.palette
+import com.rakibjoy.problembuddy.core.ui.theme.appExtras
+import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.ThemeMode
 import com.rakibjoy.problembuddy.domain.model.Tier
-import com.rakibjoy.problembuddy.domain.model.TrainingJob
-import kotlinx.coroutines.delay
-
-private val TRAINING_TIPS = listOf(
-    "Tip: Run training weekly to keep your corpus fresh.",
-    "Tip: Solve one problem above your rating every day.",
-    "Tip: Revisit failed attempts before moving on.",
-    "Tip: Weak-tag drills beat random grinding.",
-)
+import java.util.Calendar
 
 @Composable
 fun HomeScreen(
@@ -120,491 +99,451 @@ fun HomeScreen(
     state: HomeState,
     onIntent: (HomeIntent) -> Unit,
 ) {
-    val tier = Tier.forMaxRating(state.rating ?: 0)
-    val tip = remember(state.handle) {
-        TRAINING_TIPS[(state.handle?.hashCode()?.rem(TRAINING_TIPS.size)?.let {
-            if (it < 0) it + TRAINING_TIPS.size else it
-        } ?: 0)]
-    }
-
     GradientSurface {
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { AppTopBar(title = "") },
+            topBar = {
+                AppTopBar(
+                    actions = {
+                        IconButton(onClick = { onIntent(HomeIntent.SettingsClicked) }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = "Settings",
+                                tint = MaterialTheme.appExtras.textTertiary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    },
+                )
+            },
         ) { padding ->
-            val visibility = remember { mutableStateMapOf<Int, Boolean>() }
-
-            val sections = buildSections(state)
-            LaunchedEffect(sections.size) {
-                sections.indices.forEach { idx ->
-                    if (visibility[idx] != true) {
-                        delay(60L)
-                        visibility[idx] = true
-                    }
-                }
-            }
-
             LazyColumn(
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                sections.forEachIndexed { index, section ->
-                    item(key = section.key) {
-                        AnimatedVisibility(
-                            visible = visibility[index] == true,
-                            enter = fadeIn(tween(280)) +
-                                slideInVertically(tween(280)) { it / 8 },
-                        ) {
-                            when (section) {
-                                Section.Greeting -> GreetingHeader(
-                                    handle = state.handle,
-                                    rating = state.rating,
-                                    tier = tier,
-                                    avatarUrl = state.avatarUrl,
-                                )
-                                Section.Stats -> StatsRow(
-                                    rating = state.rating ?: 0,
-                                    maxRating = state.maxRating ?: state.rating ?: 0,
-                                    tier = tier,
-                                )
-                                Section.PrimaryCta -> PrimaryCtaCard(
-                                    enabled = state.handle != null,
-                                    tier = tier,
-                                    onClick = { onIntent(HomeIntent.RecommendClicked) },
-                                )
-                                Section.EmptyCorpus -> EmptyCorpusCard(
-                                    onTrainClicked = { onIntent(HomeIntent.TrainClicked) },
-                                )
-                                Section.Training -> state.latestJob?.let { job ->
-                                    Column {
-                                        SectionHeader(title = "Last training")
-                                        TrainingStatusCard(job = job)
-                                    }
-                                }
-                                Section.QuickActions -> QuickActionsRow(
-                                    onTrain = { onIntent(HomeIntent.TrainClicked) },
-                                    onProfile = { onIntent(HomeIntent.ProfileClicked) },
-                                    onSettings = { onIntent(HomeIntent.SettingsClicked) },
-                                )
-                                Section.Footer -> FooterTip(tip)
-                            }
+                item(key = "handle") {
+                    HandleRow(
+                        handle = state.handle,
+                        tier = Tier.forMaxRating(state.rating ?: 0),
+                        avatarUrl = state.avatarUrl,
+                    )
+                }
+
+                item(key = "stats") {
+                    StatsRow(
+                        rating = state.rating,
+                        ratingDelta = state.ratingDelta,
+                        solved = state.problemsSolved,
+                        streak = state.streakDays,
+                    )
+                }
+
+                state.weakTagTrend?.let { trend ->
+                    item(key = "weak-trend") {
+                        WeakTagTrendSection(trend = trend, onAllTags = { /* TODO */ })
+                    }
+                }
+
+                if (state.todayPicks.isNotEmpty()) {
+                    item(key = "picks-header") {
+                        SectionHeaderRow(
+                            title = "TODAY'S PICKS",
+                            actionLabel = "see all →",
+                            onActionClick = { onIntent(HomeIntent.RecommendClicked) },
+                        )
+                    }
+                    items@ for (pick in state.todayPicks.take(2)) {
+                        item(key = "pick-${pick.problem.contestId}${pick.problem.problemIndex}") {
+                            ProblemCard(pick = pick)
                         }
                     }
                 }
+
+                if (state.upsolve.isNotEmpty()) {
+                    item(key = "upsolve-header") {
+                        SectionHeaderRow(
+                            title = "UPSOLVE QUEUE",
+                            actionLabel = "from last contest",
+                            onActionClick = { /* TODO: link to contest history */ },
+                        )
+                    }
+                    for ((idx, up) in state.upsolve.take(3).withIndex()) {
+                        item(key = "upsolve-$idx-${up.name}") {
+                            UpsolveCard(name = up.name, meta = up.meta, badge = up.badge)
+                        }
+                    }
+                }
+
+                item(key = "cta") {
+                    PrimaryCta(onClick = { onIntent(HomeIntent.RecommendClicked) })
+                }
+
+                item(key = "bottom-pad") { Spacer(Modifier.height(8.dp)) }
             }
         }
     }
 }
 
-private enum class Section(val key: String) {
-    Greeting("greeting"),
-    Stats("stats"),
-    PrimaryCta("cta"),
-    EmptyCorpus("empty-corpus"),
-    Training("training"),
-    QuickActions("quick-actions"),
-    Footer("footer"),
-}
-
-private fun buildSections(state: HomeState): List<Section> = buildList {
-    add(Section.Greeting)
-    if (state.rating != null) add(Section.Stats)
-    add(Section.PrimaryCta)
-    if (state.handle != null && !state.hasCorpus) add(Section.EmptyCorpus)
-    if (state.latestJob != null) add(Section.Training)
-    add(Section.QuickActions)
-    add(Section.Footer)
-}
+// ──────────────── Handle row ────────────────
 
 @Composable
-private fun GreetingHeader(handle: String?, rating: Int?, tier: Tier, avatarUrl: String?) {
-    val greetingDescription = buildString {
-        append("Hello, ")
-        append(handle ?: "friend")
-        if (rating != null) {
-            append(". ")
-            append(tier.label)
-            append(", rating ")
-            append(rating)
-        }
-    }
+private fun HandleRow(handle: String?, tier: Tier, avatarUrl: String?) {
+    val extras = MaterialTheme.appExtras
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) { contentDescription = greetingDescription },
+            .padding(top = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        HandleAvatar(handle = handle, avatarUrl = avatarUrl, tier = tier, size = 38.dp)
+        Column {
             Text(
-                text = "Hello,",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = greetingForHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)),
+                style = MaterialTheme.typography.labelSmall,
+                color = extras.textSecondary,
             )
             if (handle != null) {
                 HandleText(
                     handle = handle,
                     tier = tier,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
             } else {
                 Text(
                     text = "friend",
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
-        val palette = tier.palette()
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            HandleAvatar(
-                handle = handle,
-                avatarUrl = avatarUrl,
-                tier = tier,
-                size = 64.dp,
-            )
-            if (rating != null) {
-                Spacer(Modifier.height(Spacing.xs))
-                Text(
-                    text = tier.abbreviation(),
-                    style = MaterialTheme.typography.labelSmall.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold,
                     ),
-                    color = palette.strong,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
     }
 }
 
-private fun Tier.abbreviation(): String =
-    label.split(' ').filter { it.isNotBlank() }.joinToString("") { it.first().uppercase() }
+private fun greetingForHour(hour: Int): String = when (hour) {
+    in 5..11 -> "good morning"
+    in 12..16 -> "good afternoon"
+    else -> "good evening"
+}
+
+// ──────────────── Stats row ────────────────
 
 @Composable
-private fun StatsRow(rating: Int, maxRating: Int, tier: Tier) {
+private fun StatsRow(rating: Int?, ratingDelta: Int?, solved: Int?, streak: Int?) {
+    val extras = MaterialTheme.appExtras
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val deltaText = ratingDelta
+            ?.takeIf { it != 0 }
+            ?.let { if (it > 0) "+$it" else "$it" }
         StatCard(
+            value = rating?.toString() ?: "—",
             label = "RATING",
-            value = "$rating",
-            accent = tier.palette().strong,
+            accent = extras.accentVioletSoft,
+            deltaText = deltaText,
+            deltaIsPositive = (ratingDelta ?: 0) >= 0,
             modifier = Modifier.weight(1f),
         )
         StatCard(
-            label = "MAX",
-            value = "$maxRating",
-            accent = MaterialTheme.colorScheme.secondary,
+            value = solved?.toString() ?: "—",
+            label = "SOLVED",
+            accent = extras.accentCyanSoft,
+            modifier = Modifier.weight(1f),
+        )
+        StatCard(
+            value = streak?.toString() ?: "—",
+            label = "STREAK",
+            accent = Color(0xFFF59E0B),
+            deltaText = if (streak != null) "days" else null,
+            deltaIsPositive = true,
             modifier = Modifier.weight(1f),
         )
     }
 }
 
+// ──────────────── Section header ────────────────
+
 @Composable
-private fun PrimaryCtaCard(
-    enabled: Boolean,
-    tier: Tier,
-    onClick: () -> Unit,
+private fun SectionHeaderRow(
+    title: String,
+    actionLabel: String,
+    onActionClick: () -> Unit,
 ) {
-    val palette = tier.palette()
-    val alpha = if (enabled) 1f else 0.45f
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 96.dp)
-            .pressScale()
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = AppShapes.large,
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.hover),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(tier.gradient())
-                .padding(Spacing.lg),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Get problems",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    color = palette.onColor.copy(alpha = alpha),
-                )
-                Text(
-                    text = "Tailored to your weak tags",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = palette.onColor.copy(alpha = 0.85f * alpha),
-                )
-            }
-            // decorative
-            Icon(
-                imageVector = Icons.AutoMirrored.Default.ArrowForward,
-                contentDescription = null,
-                tint = palette.onColor.copy(alpha = alpha),
-                modifier = Modifier.size(28.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun TrainingStatusCard(job: TrainingJob) {
-    val tier = job.currentTier
-    val accent = tier?.palette()?.strong ?: MaterialTheme.colorScheme.primary
-    val brush = tier?.gradient()
-    val progress = if (job.total > 0) job.done.toFloat() / job.total else 0f
-    val statusLabel = when (job.status) {
-        TrainingJob.Status.QUEUED -> "Queued"
-        TrainingJob.Status.RUNNING -> "Running"
-        TrainingJob.Status.SUCCESS -> "Success"
-        TrainingJob.Status.FAILED -> "Failed"
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.hover),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min),
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(accent),
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    StatusChip(label = statusLabel, accent = accent)
-                    if (job.status == TrainingJob.Status.RUNNING) {
-                        PulsingDot(color = accent)
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = "${job.done}/${job.total}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                AnimatedProgressBar(
-                    progress = progress,
-                    accentBrush = brush,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusChip(label: String, accent: Color) {
-    Box(
-        modifier = Modifier
-            .clip(AppShapes.small)
-            .background(accent.copy(alpha = 0.18f))
-            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+    val extras = MaterialTheme.appExtras
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.SemiBold,
-            ),
-            color = accent,
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.0.sp),
+            color = extras.textTertiary,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = actionLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = extras.accentVioletSoft,
+            modifier = Modifier.clickable(onClick = onActionClick),
         )
     }
 }
 
+// ──────────────── Weak tag trend ────────────────
+
 @Composable
-private fun PulsingDot(color: Color) {
-    val transition = rememberInfiniteTransition(label = "pulse")
-    val alpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900),
-            repeatMode = RepeatMode.Reverse,
+private fun WeakTagTrendSection(trend: WeakTagTrend, onAllTags: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SectionHeaderRow(
+            title = "WEAK TAG TREND",
+            actionLabel = "all tags →",
+            onActionClick = onAllTags,
+        )
+        SparklineCard(
+            tag = trend.tag,
+            trendLabel = trend.trendLabel,
+            trendIsDecline = trend.declining,
+            points = trend.points,
+        )
+    }
+}
+
+// ──────────────── Primary CTA ────────────────
+
+@Composable
+private fun PrimaryCta(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White,
         ),
-        label = "pulse-alpha",
-    )
+        contentPadding = PaddingValues(vertical = 12.dp),
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Message,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = Color.White,
+        )
+        Spacer(Modifier.size(8.dp))
+        Text(
+            text = "get recommendations",
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.24.sp, // ~0.02em @ 12sp
+            ),
+        )
+    }
+}
+
+// ──────────────── Problem card (local) ────────────────
+
+@Composable
+private fun ProblemCard(pick: TodayPick) {
+    val extras = MaterialTheme.appExtras
+    val shape = RoundedCornerShape(16.dp)
+    val alpha = when {
+        pick.isSolved -> 0.45f
+        pick.isSkipped -> 0.30f
+        else -> 1f
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(extras.surfaceElevated, shape)
+            .border(0.5.dp, extras.borderSubtle, shape)
+            .padding(12.dp)
+            .alpha(alpha),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RatingRail(rating = pick.problem.rating ?: 0, tier = pick.tier)
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = pick.problem.name,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = (-0.12).sp, // -0.01em @ 12sp
+                    textDecoration = if (pick.isSolved) TextDecoration.LineThrough else null,
+                ),
+                color = if (pick.isSolved) extras.textTertiary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = problemMeta(pick.problem),
+                style = MaterialTheme.typography.labelSmall,
+                color = extras.textTertiary,
+            )
+            if (pick.problem.tags.isNotEmpty()) {
+                Spacer(Modifier.height(5.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    pick.problem.tags.take(3).forEach { tag ->
+                        TagChip(tag = tag, weak = tag in pick.weakTags)
+                    }
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            when {
+                pick.isSolved -> ActionIconButton(
+                    icon = Icons.Filled.Check,
+                    tint = Color(0xFF22C55E),
+                    contentDescription = "Solved",
+                )
+                pick.isSkipped -> {
+                    // Skipped variant shows nothing (or could show a muted chevron)
+                }
+                else -> {
+                    ActionIconButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowForward,
+                        tint = if (pick.isActive) extras.accentVioletSoft else extras.textTertiary,
+                        contentDescription = "Solve",
+                    )
+                    ActionIconButton(
+                        icon = Icons.Outlined.BookmarkBorder,
+                        tint = extras.textTertiary,
+                        contentDescription = "Bookmark",
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    contentDescription: String,
+) {
+    val extras = MaterialTheme.appExtras
+    val shape = RoundedCornerShape(7.dp)
     Box(
         modifier = Modifier
-            .size(10.dp)
-            .clip(CircleShape)
-            .background(color.copy(alpha = alpha)),
-    )
-}
-
-@Composable
-private fun QuickActionsRow(
-    onTrain: () -> Unit,
-    onProfile: () -> Unit,
-    onSettings: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            .size(26.dp)
+            .clip(shape)
+            .border(0.5.dp, extras.borderSubtle, shape),
+        contentAlignment = Alignment.Center,
     ) {
-        QuickActionCard(
-            label = "Train",
-            icon = Icons.Default.Refresh,
-            onClick = onTrain,
-            modifier = Modifier.weight(1f),
-        )
-        QuickActionCard(
-            label = "Profile",
-            icon = Icons.Default.Person,
-            onClick = onProfile,
-            modifier = Modifier.weight(1f),
-        )
-        QuickActionCard(
-            label = "Settings",
-            icon = Icons.Default.Settings,
-            onClick = onSettings,
-            modifier = Modifier.weight(1f),
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(13.dp),
         )
     }
 }
 
-@Composable
-private fun QuickActionCard(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedCard(
-        modifier = modifier
-            .height(96.dp)
-            .pressScale()
-            .clickable(onClick = onClick),
-        shape = AppShapes.medium,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(Spacing.md),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            // decorative
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
+private fun problemMeta(p: Problem): String {
+    // e.g. "1854 · G · div. 1" — div detection from contestId is lossy, so we
+    // use a simple fallback. TODO: plumb division info through Problem model.
+    val rating = p.rating?.toString() ?: "—"
+    return "$rating · ${p.problemIndex}"
 }
 
-@Composable
-private fun FooterTip(tip: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.card),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            // decorative
-            Icon(
-                imageVector = Icons.Default.Lightbulb,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.secondary,
-            )
-            Text(
-                text = tip,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Start,
-            )
-        }
-    }
-}
+// ──────────────── Previews ────────────────
 
-@Preview(name = "Home - no handle (dark)")
+@Preview(name = "Home - no handle")
 @Composable
 private fun HomeScreenNoHandlePreview() {
     ProblemBuddyTheme(themeMode = ThemeMode.DARK) {
-        HomeScreen(
-            state = HomeState(),
-            onIntent = {},
-        )
+        HomeScreen(state = HomeState(), onIntent = {})
     }
 }
 
-@Preview(name = "Home - with handle + corpus (dark)")
+@Preview(name = "Home - returning user (full)")
 @Composable
-private fun HomeScreenWithHandlePreview() {
+private fun HomeScreenReturningPreview() {
     ProblemBuddyTheme(themeMode = ThemeMode.DARK) {
         HomeScreen(
             state = HomeState(
-                handle = "tourist",
-                greeting = "Welcome back, tourist",
-                rating = 3800,
-                maxRating = 3979,
+                handle = "rakibjoy",
+                rating = 2150,
+                ratingDelta = 42,
+                problemsSolved = 1247,
+                streakDays = 14,
                 hasCorpus = true,
+                weakTagTrend = WeakTagTrend(
+                    tag = "data structures",
+                    trendLabel = "↓ 38% solve rate",
+                    declining = true,
+                    points = listOf(28f, 24f, 30f, 20f, 26f, 14f, 22f, 10f),
+                ),
+                todayPicks = listOf(
+                    TodayPick(
+                        problem = Problem(1854, "G", "Segment Tree Beats", 2100, listOf("data structures", "segment tree")),
+                        tier = Tier.EXPERT,
+                        weakTags = setOf("data structures"),
+                        isActive = true,
+                    ),
+                    TodayPick(
+                        problem = Problem(1796, "E", "Painting Array", 1900, listOf("greedy", "constructive")),
+                        tier = Tier.MASTER,
+                        isSolved = true,
+                    ),
+                ),
+                upsolve = listOf(
+                    UpsolveProblem("Palindrome Graph", "CF 1900 · Div 1 D", UpsolveBadge.Unattempted),
+                    UpsolveProblem("XOR Partition", "CF 2100 · Div 1 E", UpsolveBadge.Penalty),
+                ),
             ),
             onIntent = {},
         )
     }
 }
 
-@Preview(name = "Home - training running (dark)")
+@Preview(name = "Home - legendary tourist")
 @Composable
-private fun HomeScreenTrainingPreview() {
+private fun HomeScreenLegendaryPreview() {
     ProblemBuddyTheme(themeMode = ThemeMode.DARK) {
         HomeScreen(
             state = HomeState(
                 handle = "tourist",
-                greeting = "Welcome back, tourist",
-                rating = 1800,
-                maxRating = 2100,
+                rating = 3847,
+                ratingDelta = 42,
+                problemsSolved = 1247,
+                streakDays = 14,
                 hasCorpus = true,
-                latestJob = TrainingJob(
-                    id = 1,
-                    handle = "tourist",
-                    status = TrainingJob.Status.RUNNING,
-                    currentTier = Tier.EXPERT,
-                    done = 65,
-                    total = 120,
-                    error = null,
-                    updatedAt = 0,
+                weakTagTrend = WeakTagTrend(
+                    tag = "data structures",
+                    trendLabel = "↓ 38% solve rate",
+                    declining = true,
+                    points = listOf(28f, 24f, 30f, 20f, 26f, 14f, 22f, 10f),
+                ),
+                todayPicks = listOf(
+                    TodayPick(
+                        problem = Problem(1854, "G", "Segment Tree Beats", 2100, listOf("data structures", "segment tree")),
+                        tier = Tier.EXPERT,
+                        weakTags = setOf("data structures"),
+                        isActive = true,
+                    ),
+                    TodayPick(
+                        problem = Problem(1796, "E", "Painting Array", 1900, listOf("greedy", "constructive")),
+                        tier = Tier.MASTER,
+                        isSolved = true,
+                    ),
+                ),
+                upsolve = listOf(
+                    UpsolveProblem("Palindrome Graph", "CF 1900 · Div 1 D", UpsolveBadge.Unattempted),
+                    UpsolveProblem("XOR Partition", "CF 2100 · Div 1 E", UpsolveBadge.Penalty),
                 ),
             ),
             onIntent = {},

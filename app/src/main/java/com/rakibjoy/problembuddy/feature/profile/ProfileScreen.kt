@@ -12,31 +12,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -44,26 +33,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
-import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import com.rakibjoy.problembuddy.core.ui.components.HandleText
-import com.rakibjoy.problembuddy.core.ui.components.SectionHeader
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonCard
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonLine
 import com.rakibjoy.problembuddy.core.ui.components.StaleDataBanner
-import com.rakibjoy.problembuddy.core.ui.components.StatCard
+import com.rakibjoy.problembuddy.core.ui.components.TabsRow
 import com.rakibjoy.problembuddy.core.ui.components.TagChip
-import com.rakibjoy.problembuddy.core.ui.components.TierBadge
-import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
-import com.rakibjoy.problembuddy.core.ui.theme.Elevations
+import com.rakibjoy.problembuddy.core.ui.components.VerticalTierLadder
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
 import com.rakibjoy.problembuddy.core.ui.theme.Spacing
+import com.rakibjoy.problembuddy.core.ui.theme.appExtras
 import com.rakibjoy.problembuddy.core.ui.theme.gradient
 import com.rakibjoy.problembuddy.core.ui.theme.palette
 import com.rakibjoy.problembuddy.domain.model.Tier
@@ -81,7 +68,6 @@ fun ProfileScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     state: ProfileState,
@@ -89,19 +75,14 @@ fun ProfileScreen(
     onNavigateToTrain: (() -> Unit)? = null,
 ) {
     GradientSurface {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = { AppTopBar(title = "Profile") },
-        ) { padding ->
+        Box(modifier = Modifier.fillMaxSize()) {
             when {
-                state.loading -> LoadingContent(padding)
+                state.loading -> LoadingContent()
                 state.error != null -> ErrorContent(
-                    padding = padding,
                     message = state.error,
                     onRetry = { onIntent(ProfileIntent.Refresh) },
                 )
                 else -> ProfileContent(
-                    padding = padding,
                     state = state,
                     onNavigateToTrain = onNavigateToTrain,
                 )
@@ -111,37 +92,32 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun LoadingContent(padding: PaddingValues) {
-    LazyColumn(
+private fun LoadingContent() {
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding),
-        contentPadding = PaddingValues(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
-        item { SkeletonCard(modifier = Modifier.height(140.dp)) }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                SkeletonLine(width = 160.dp, height = 22.dp)
-                SkeletonLine(width = 220.dp, height = 14.dp)
-                SkeletonLine(width = 180.dp, height = 14.dp)
-                SkeletonLine(width = 200.dp, height = 14.dp)
-                SkeletonLine(width = 140.dp, height = 14.dp)
-            }
+        SkeletonCard(modifier = Modifier.height(140.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            SkeletonLine(width = 220.dp, height = 14.dp)
+            SkeletonLine(width = 180.dp, height = 14.dp)
+            SkeletonLine(width = 260.dp, height = 14.dp)
+            SkeletonLine(width = 160.dp, height = 14.dp)
+            SkeletonLine(width = 200.dp, height = 14.dp)
+            SkeletonLine(width = 140.dp, height = 14.dp)
         }
     }
 }
 
 @Composable
 private fun ErrorContent(
-    padding: PaddingValues,
     message: String,
     onRetry: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         EmptyStateIllustration(
@@ -156,303 +132,311 @@ private fun ErrorContent(
 
 @Composable
 private fun ProfileContent(
-    padding: PaddingValues,
     state: ProfileState,
     onNavigateToTrain: (() -> Unit)? = null,
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding),
-        contentPadding = PaddingValues(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-    ) {
-        if (state.stale) {
-            item { StaleDataBanner(fetchedAtMillis = state.fetchedAtMillis) }
-        }
-        item {
-            HeroCard(
-                handle = state.handle,
-                rating = state.rating,
-                maxRating = state.maxRating,
-                currentTier = state.currentTier,
-                avatarUrl = state.avatarUrl,
-            )
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                StatCard(
-                    label = "RATING",
-                    value = state.rating?.toString() ?: "—",
-                    accent = state.currentTier?.palette()?.strong
-                        ?: MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                StatCard(
-                    label = "MAX",
-                    value = state.maxRating?.toString() ?: "—",
-                    accent = state.currentTier?.palette()?.strong
-                        ?: MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.weight(1f),
-                )
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val tabs = remember { listOf("tier ladder", "weak tags", "activity") }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        ProfileHero(
+            handle = state.handle,
+            currentTier = state.currentTier,
+            avatarUrl = state.avatarUrl,
+            maxRating = state.maxRating,
+            problemsSolved = state.problemsSolved,
+            coveragePct = state.coveragePct,
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = 0.dp,
+                bottom = Spacing.lg,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            if (state.stale) {
+                item {
+                    StaleDataBanner(fetchedAtMillis = state.fetchedAtMillis)
+                }
             }
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                SectionHeader(title = "Tier ladder")
-                TierLadder(currentTier = state.currentTier)
-            }
-        }
-        item {
-            SectionHeader(
-                title = "Weak tags",
-                actionLabel = "How it works?",
-                onAction = { /* placeholder */ },
-            )
-        }
-        if (state.weakTags.isEmpty()) {
             item {
-                EmptyCorpusCard(onTrainClicked = { onNavigateToTrain?.invoke() })
+                TabsRow(
+                    tabs = tabs,
+                    selectedIndex = selectedTab,
+                    onSelect = { selectedTab = it },
+                )
             }
-        } else {
-            itemsIndexed(state.weakTags, key = { _, item -> item.tag }) { _, stat ->
-                WeakTagRow(stat = stat, currentTier = state.currentTier)
+
+            when (selectedTab) {
+                0 -> tierLadderTab(state)
+                1 -> weakTagsTab(state, onNavigateToTrain)
+                2 -> activityTab()
             }
         }
     }
 }
 
+private fun androidx.compose.foundation.lazy.LazyListScope.tierLadderTab(state: ProfileState) {
+    val tier = state.currentTier
+    val rating = state.rating ?: state.maxRating ?: 0
+    if (tier != null) {
+        item(key = "ladder") {
+            VerticalTierLadder(currentTier = tier, currentRating = rating)
+        }
+        if (tier != Tier.NEWBIE && state.maxRating != null) {
+            item(key = "ladder-caption") {
+                LadderCaption(maxRating = state.maxRating)
+            }
+        }
+    } else {
+        item(key = "ladder-unknown") {
+            CenterHint(text = "tier unknown")
+        }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.weakTagsTab(
+    state: ProfileState,
+    onNavigateToTrain: (() -> Unit)?,
+) {
+    if (state.weakTags.isEmpty()) {
+        item(key = "weak-empty") {
+            EmptyCorpusCard(onTrainClicked = { onNavigateToTrain?.invoke() })
+        }
+    } else {
+        itemsIndexed(state.weakTags, key = { _, it -> "weak-${it.tag}" }) { _, stat ->
+            WeakTagCard(stat = stat, currentTier = state.currentTier)
+        }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.activityTab() {
+    item(key = "activity-placeholder") {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            val extras = MaterialTheme.appExtras
+            Text(
+                text = "activity coming soon",
+                style = MaterialTheme.typography.labelMedium,
+                color = extras.textSecondary,
+            )
+            Text(
+                text = "heatmap, streaks, and rating history will land here",
+                style = MaterialTheme.typography.labelSmall,
+                color = extras.textTertiary,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
 @Composable
-private fun HeroCard(
+private fun ProfileHero(
     handle: String?,
-    rating: Int?,
-    maxRating: Int?,
     currentTier: Tier?,
     avatarUrl: String?,
+    maxRating: Int?,
+    problemsSolved: Int?,
+    coveragePct: Int?,
 ) {
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-    val brush: Brush = currentTier?.gradient()
-        ?: Brush.verticalGradient(listOf(primary, secondary))
-    val onColor = currentTier?.palette()?.onColor ?: Color.White
+    val extras = MaterialTheme.appExtras
     val heroDescription = buildString {
         append(handle ?: "Unknown handle")
         if (currentTier != null) {
             append(", ")
-            append(currentTier.label)
+            append(currentTier.label.lowercase())
         }
-        if (rating != null) {
-            append(", rating ")
-            append(rating)
-        }
-        if (maxRating != null && maxRating != rating) {
-            append(", max ")
+        if (maxRating != null) {
+            append(", max rating ")
             append(maxRating)
         }
     }
-    Card(
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) { contentDescription = heroDescription },
-        shape = AppShapes.extraLarge,
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.hover),
+            .background(extras.surfaceElevated)
+            .semantics(mergeDescendants = true) { contentDescription = heroDescription }
+            .padding(Spacing.lg),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(brush)
-                .padding(Spacing.xl),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             HandleAvatar(
                 handle = handle,
                 avatarUrl = avatarUrl,
                 tier = currentTier,
-                size = 80.dp,
+                size = 48.dp,
             )
-            Spacer(Modifier.width(Spacing.lg))
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
+            Spacer(Modifier.padding(start = Spacing.md))
+            Column {
                 if (handle != null && currentTier != null) {
                     HandleText(
                         handle = handle,
                         tier = currentTier,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        baseColor = onColor,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 } else {
                     Text(
                         text = handle ?: "—",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = onColor,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (currentTier != null) {
-                        TierBadge(tier = currentTier, compact = false)
-                        Spacer(Modifier.width(Spacing.sm))
-                    }
-                    Text(
-                        text = rating?.toString() ?: "—",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                        color = onColor,
-                    )
-                }
-                if (maxRating != null && maxRating != rating) {
-                    Text(
-                        text = "Max $maxRating",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = onColor.copy(alpha = 0.8f),
-                    )
-                }
+                Text(
+                    text = (currentTier?.label ?: "unranked").lowercase(),
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.5.sp),
+                    color = extras.textTertiary,
+                )
             }
         }
-    }
-}
 
-@Composable
-private fun TierLadder(currentTier: Tier?) {
-    val tiers = Tier.entries
-    val currentIndex = currentTier?.let { tiers.indexOf(it) } ?: -1
-    val listState = rememberLazyListState()
+        Spacer(Modifier.height(Spacing.md))
 
-    LaunchedEffect(currentIndex) {
-        if (currentIndex >= 0) {
-            listState.animateScrollToItem(
-                index = currentIndex.coerceAtLeast(0),
-            )
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        itemsIndexed(tiers) { _, tier ->
-            TierPill(tier = tier, currentTier = currentTier)
-        }
-    }
-}
-
-@Composable
-private fun TierPill(tier: Tier, currentTier: Tier?) {
-    val palette = tier.palette()
-    val isCurrent = currentTier != null && tier == currentTier
-    val isPast = currentTier != null && tier.floor < currentTier.floor
-    val bg: Color = when {
-        isCurrent -> palette.strong
-        isPast -> palette.soft.copy(alpha = 0.35f)
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val fg: Color = when {
-        isCurrent -> palette.onColor
-        isPast -> MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val scale = if (isCurrent) 1.12f else 1f
-    val elevation = if (isCurrent) Elevations.hover else 0.dp
-    val primary = MaterialTheme.colorScheme.primary
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        val cardModifier = Modifier
-            .width(96.dp)
-            .height(64.dp)
-            .scale(scale)
-            .then(
-                if (isCurrent) {
-                    Modifier.border(
-                        width = 1.5.dp,
-                        color = primary.copy(alpha = 0.5f),
-                        shape = AppShapes.medium,
-                    )
-                } else {
-                    Modifier
-                },
-            )
-        Card(
-            modifier = cardModifier,
-            shape = AppShapes.medium,
-            colors = CardDefaults.cardColors(containerColor = bg, contentColor = fg),
-            elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        val tierColor = currentTier?.palette()?.strong ?: MaterialTheme.colorScheme.primary
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.Top,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(Spacing.xs),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = tier.initials(),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = fg,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = "${tier.floor}+",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = fg,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-        if (isCurrent) {
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
-                contentDescription = null,
-                tint = primary,
-                modifier = Modifier.size(14.dp),
+            HeroStat(
+                modifier = Modifier.weight(1f),
+                value = maxRating?.toString() ?: "—",
+                label = "MAX RATING",
+                valueColor = tierColor,
+            )
+            HeroStat(
+                modifier = Modifier.weight(1f),
+                value = problemsSolved?.toString() ?: "—",
+                label = "PROBLEMS",
+                valueColor = MaterialTheme.colorScheme.onSurface,
+            )
+            HeroStat(
+                modifier = Modifier.weight(1f),
+                value = coveragePct?.let { "$it%" } ?: "—",
+                label = "COVERAGE",
+                valueColor = extras.accentVioletSoft,
             )
         }
-    }
-}
 
-private fun Tier.initials(): String =
-    label.split(' ').filter { it.isNotBlank() }.joinToString("") { it.first().uppercase() }
-
-@Composable
-private fun WeakTagRow(stat: WeakTagStat, currentTier: Tier?) {
-    val coverage = stat.coverage.coerceIn(0f, 1f)
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevations.card),
-    ) {
-        Column(
+        Spacer(Modifier.height(Spacing.md))
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .height(0.5.dp)
+                .background(extras.borderSubtle),
+        )
+    }
+}
+
+@Composable
+private fun HeroStat(
+    value: String,
+    label: String,
+    valueColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val extras = MaterialTheme.appExtras
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.displaySmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-1.44).sp, // -0.06em @ 24sp
+            ),
+            color = valueColor,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.5.sp),
+            color = extras.textTertiary,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun LadderCaption(maxRating: Int) {
+    val extras = MaterialTheme.appExtras
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Spacing.sm),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "all tiers climbed · peak $maxRating",
+            style = MaterialTheme.typography.labelSmall,
+            color = extras.textTertiary,
+        )
+    }
+}
+
+@Composable
+private fun CenterHint(text: String) {
+    val extras = MaterialTheme.appExtras
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Spacing.xl),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = extras.textTertiary,
+        )
+    }
+}
+
+@Composable
+private fun WeakTagCard(stat: WeakTagStat, currentTier: Tier?) {
+    val extras = MaterialTheme.appExtras
+    val coverage = stat.coverage.coerceIn(0f, 1f)
+    val pct = (coverage * 100).toInt()
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(extras.surfaceElevated, shape)
+            .border(0.5.dp, extras.borderSubtle, shape)
+            .padding(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TagChip(tag = stat.tag)
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = "${(coverage * 100).toInt()}% covered",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            AnimatedProgressBar(
-                progress = coverage,
-                accentBrush = currentTier?.gradient(),
-            )
+            TagChip(tag = stat.tag, weak = true)
+            Spacer(Modifier.weight(1f))
             Text(
-                text = "${((1f - coverage) * 100).toInt()}% gap",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "$pct% covered",
+                style = MaterialTheme.typography.labelSmall,
+                color = extras.textSecondary,
             )
         }
+        AnimatedProgressBar(
+            progress = coverage,
+            accentBrush = currentTier?.gradient(),
+            modifier = Modifier.height(4.dp),
+        )
+        Text(
+            text = "${100 - pct}% gap",
+            style = MaterialTheme.typography.labelSmall,
+            color = extras.textTertiary,
+        )
     }
 }
 
@@ -464,21 +448,23 @@ private fun ProfileScreenLoadingPreview() {
     }
 }
 
-@Preview(name = "Profile - Success")
+@Preview(name = "Profile - Legendary")
 @Composable
-private fun ProfileScreenDataPreview() {
+private fun ProfileScreenLegendaryPreview() {
     ProblemBuddyTheme {
         ProfileScreen(
             state = ProfileState(
                 loading = false,
                 handle = "tourist",
-                rating = 3800,
-                maxRating = 3979,
+                rating = 3847,
+                maxRating = 3847,
                 currentTier = Tier.LEGENDARY,
+                problemsSolved = 1247,
+                coveragePct = 92,
                 weakTags = listOf(
-                    WeakTagStat("dp", 0.15f),
-                    WeakTagStat("graphs", 0.32f),
-                    WeakTagStat("math", 0.48f),
+                    WeakTagStat("data structures", 0.62f),
+                    WeakTagStat("graphs", 0.48f),
+                    WeakTagStat("math", 0.71f),
                 ),
             ),
             onIntent = {},
@@ -486,12 +472,24 @@ private fun ProfileScreenDataPreview() {
     }
 }
 
-@Preview(name = "Profile - No handle")
+@Preview(name = "Profile - Specialist")
 @Composable
-private fun ProfileScreenNoHandlePreview() {
+private fun ProfileScreenSpecialistPreview() {
     ProblemBuddyTheme {
         ProfileScreen(
-            state = ProfileState(loading = false, error = "No handle"),
+            state = ProfileState(
+                loading = false,
+                handle = "rakibjoy",
+                rating = 1500,
+                maxRating = 1540,
+                currentTier = Tier.SPECIALIST,
+                problemsSolved = 312,
+                coveragePct = 41,
+                weakTags = listOf(
+                    WeakTagStat("dp", 0.22f),
+                    WeakTagStat("greedy", 0.35f),
+                ),
+            ),
             onIntent = {},
         )
     }

@@ -5,29 +5,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination as AndroidXNavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -35,7 +19,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.rakibjoy.problembuddy.core.ui.theme.Elevations
+import com.rakibjoy.problembuddy.core.ui.components.AppBottomBar
+import com.rakibjoy.problembuddy.core.ui.components.NavDestination
 import com.rakibjoy.problembuddy.feature.home.HomeScreen
 import com.rakibjoy.problembuddy.feature.onboarding.OnboardingScreen
 import com.rakibjoy.problembuddy.feature.profile.ProfileScreen
@@ -62,24 +47,20 @@ object Profile
 @Serializable
 object Settings
 
-private data class BottomBarItem(
-    val label: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector,
-    val route: Any,
-    val matches: (NavDestination?) -> Boolean,
-)
+private fun AndroidXNavDestination?.toNavDestination(): NavDestination? = when {
+    this == null -> null
+    hasRoute(Home::class) -> NavDestination.Home
+    hasRoute(Recommend::class) -> NavDestination.Recommend
+    hasRoute(Train::class) -> NavDestination.Train
+    hasRoute(Profile::class) -> NavDestination.Profile
+    else -> null
+}
 
-private val bottomBarItems = listOf(
-    BottomBarItem("Home", Icons.Default.Home, Icons.Outlined.Home, Home) { it?.hasRoute(Home::class) == true },
-    BottomBarItem("Recommend", Icons.Default.AutoAwesome, Icons.Outlined.AutoAwesome, Recommend) { it?.hasRoute(Recommend::class) == true },
-    BottomBarItem("Profile", Icons.Default.Person, Icons.Outlined.Person, Profile) { it?.hasRoute(Profile::class) == true },
-    BottomBarItem("Settings", Icons.Default.Settings, Icons.Outlined.Settings, Settings) { it?.hasRoute(Settings::class) == true },
-)
-
-private fun shouldShowBottomBar(destination: NavDestination?): Boolean {
-    if (destination == null) return false
-    return bottomBarItems.any { it.matches(destination) }
+private fun NavDestination.route(): Any = when (this) {
+    NavDestination.Home -> Home
+    NavDestination.Recommend -> Recommend
+    NavDestination.Train -> Train
+    NavDestination.Profile -> Profile
 }
 
 // Shared motion specs for NavHost destinations.
@@ -93,43 +74,24 @@ fun ProblemBuddyNavHost(
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val selectedTab = currentDestination.toNavDestination()
     val haptics = LocalHapticFeedback.current
 
     Scaffold(
         bottomBar = {
-            if (shouldShowBottomBar(currentDestination)) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                    tonalElevation = Elevations.hover,
-                ) {
-                    bottomBarItems.forEach { item ->
-                        val selected = item.matches(currentDestination)
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.label,
-                                )
-                            },
-                            label = { Text(item.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            ),
-                        )
+            AppBottomBar(
+                selected = selectedTab,
+                onSelect = { dest ->
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    navController.navigate(dest.route()) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
                     }
-                }
-            }
+                },
+            )
         },
     ) { padding ->
         NavHost(

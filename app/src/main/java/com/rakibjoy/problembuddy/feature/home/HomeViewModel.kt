@@ -28,6 +28,9 @@ class HomeViewModel @Inject constructor(
     private val problemDao: ProblemDao,
 ) : ViewModel() {
 
+    // TODO(redesign): wire real data for ratingDelta, problemsSolved, streakDays,
+    //   weakTagTrend, upsolve, todayPicks. Defaults (null / empty list) render
+    //   an acceptable empty state today.
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
 

@@ -1,5 +1,8 @@
 package com.rakibjoy.problembuddy.feature.home
 
+import com.rakibjoy.problembuddy.core.ui.components.UpsolveBadge
+import com.rakibjoy.problembuddy.domain.model.Problem
+import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.model.TrainingJob
 
 data class HomeState(
@@ -10,4 +13,33 @@ data class HomeState(
     val avatarUrl: String? = null,
     val hasCorpus: Boolean = false,
     val latestJob: TrainingJob? = null,
+    // Redesign additions
+    val ratingDelta: Int? = null,
+    val problemsSolved: Int? = null,
+    val streakDays: Int? = null,
+    val weakTagTrend: WeakTagTrend? = null,
+    val upsolve: List<UpsolveProblem> = emptyList(),
+    val todayPicks: List<TodayPick> = emptyList(),
+)
+
+data class WeakTagTrend(
+    val tag: String,
+    val trendLabel: String,
+    val declining: Boolean,
+    val points: List<Float>,
+)
+
+data class UpsolveProblem(
+    val name: String,
+    val meta: String,
+    val badge: UpsolveBadge,
+)
+
+data class TodayPick(
+    val problem: Problem,
+    val tier: Tier,
+    val isSolved: Boolean = false,
+    val isSkipped: Boolean = false,
+    val weakTags: Set<String> = emptySet(),
+    val isActive: Boolean = false,
 )

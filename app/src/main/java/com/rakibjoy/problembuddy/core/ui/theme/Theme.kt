@@ -3,6 +3,7 @@ package com.rakibjoy.problembuddy.core.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import com.rakibjoy.problembuddy.domain.model.ThemeMode
 
 @Composable
@@ -19,11 +20,14 @@ fun ProblemBuddyTheme(
     // Intentionally skip Android 12+ dynamicColor: we want consistent
     // ProblemBuddy branding (primary violet + cyan accent + CF tier colors).
     val colorScheme = if (darkTheme) DarkColors else LightColors
+    val extras = if (darkTheme) DarkExtras else LightExtras
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content,
-    )
+    CompositionLocalProvider(LocalAppExtras provides extras) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content,
+        )
+    }
 }
