@@ -16,6 +16,8 @@ private object PreferenceKeys {
     val KEY_CF_HANDLE = stringPreferencesKey("cf_handle")
     val KEY_RECS_PER_LOAD = intPreferencesKey("recs_per_load")
     val KEY_DIFFICULTY_OFFSET = intPreferencesKey("difficulty_offset")
+    val KEY_COMPARE_HANDLE = stringPreferencesKey("compare_handle")
+    val KEY_WEEKLY_GOAL = intPreferencesKey("weekly_goal")
 }
 
 @Singleton
@@ -43,6 +45,14 @@ class SettingsStore @Inject constructor(
         prefs[PreferenceKeys.KEY_DIFFICULTY_OFFSET] ?: 0
     }
 
+    val compareHandle: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[PreferenceKeys.KEY_COMPARE_HANDLE]
+    }
+
+    val weeklyGoal: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[PreferenceKeys.KEY_WEEKLY_GOAL] ?: 10
+    }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { prefs ->
             prefs[PreferenceKeys.KEY_THEME_MODE] = mode.name
@@ -68,6 +78,22 @@ class SettingsStore @Inject constructor(
     suspend fun setDifficultyOffset(n: Int) {
         dataStore.edit { prefs ->
             prefs[PreferenceKeys.KEY_DIFFICULTY_OFFSET] = n
+        }
+    }
+
+    suspend fun setCompareHandle(handle: String?) {
+        dataStore.edit { prefs ->
+            if (handle == null) {
+                prefs.remove(PreferenceKeys.KEY_COMPARE_HANDLE)
+            } else {
+                prefs[PreferenceKeys.KEY_COMPARE_HANDLE] = handle
+            }
+        }
+    }
+
+    suspend fun setWeeklyGoal(value: Int) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.KEY_WEEKLY_GOAL] = value
         }
     }
 

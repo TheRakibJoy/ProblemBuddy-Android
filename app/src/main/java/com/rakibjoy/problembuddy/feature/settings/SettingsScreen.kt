@@ -25,16 +25,21 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -113,6 +118,14 @@ fun SettingsScreen(
                 RecommendationsGroup(
                     recsPerLoad = state.recsPerLoad,
                     difficultyOffset = state.difficultyOffset,
+                    onIntent = onIntent,
+                )
+                GoalsGroup(
+                    weeklyGoal = state.weeklyGoal,
+                    onIntent = onIntent,
+                )
+                CompareGroup(
+                    compareHandle = state.compareHandle,
                     onIntent = onIntent,
                 )
                 DataGroup(
@@ -396,6 +409,72 @@ private fun DataGroup(
                 ) {
                     Text("delete")
                 }
+            },
+        )
+    }
+}
+
+@Composable
+private fun GoalsGroup(
+    weeklyGoal: Int,
+    onIntent: (SettingsIntent) -> Unit,
+) {
+    SettingsGroup(title = "GOALS") {
+        SettingsRow(
+            icon = Icons.Outlined.Flag,
+            title = "weekly solve goal",
+            subtitle = "target problems solved per week. tracked on home.",
+            trailing = {
+                Text(
+                    text = "$weeklyGoal",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.appExtras.accentVioletSoft,
+                )
+            },
+            belowContent = {
+                Slider(
+                    value = weeklyGoal.toFloat(),
+                    onValueChange = { onIntent(SettingsIntent.SetWeeklyGoal(it.toInt())) },
+                    valueRange = 1f..50f,
+                    steps = 48,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+            },
+        )
+    }
+}
+
+@Composable
+private fun CompareGroup(
+    compareHandle: String,
+    onIntent: (SettingsIntent) -> Unit,
+) {
+    SettingsGroup(title = "COMPARE") {
+        SettingsRow(
+            icon = Icons.Outlined.People,
+            title = "compare with",
+            subtitle = "see your profile next to another codeforces handle.",
+            belowContent = {
+                OutlinedTextField(
+                    value = compareHandle,
+                    onValueChange = { onIntent(SettingsIntent.SetCompareHandle(it)) },
+                    placeholder = { Text("handle") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        if (compareHandle.isNotEmpty()) {
+                            IconButton(onClick = { onIntent(SettingsIntent.SetCompareHandle("")) }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "clear",
+                                )
+                            }
+                        }
+                    },
+                )
             },
         )
     }

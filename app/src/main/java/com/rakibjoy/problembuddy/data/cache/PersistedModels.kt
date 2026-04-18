@@ -31,6 +31,8 @@ data class SubmissionPersisted(
     val verdict: String? = null,
     val creationTimeSeconds: Long = 0L,
     val problem: ProblemPersisted,
+    val programmingLanguage: String? = null,
+    val participantType: String? = null,
 )
 
 fun UserInfo.toPersisted(): UserInfoPersisted =
@@ -79,6 +81,8 @@ fun Submission.toPersisted(): SubmissionPersisted =
         verdict = verdict,
         creationTimeSeconds = creationTimeSeconds,
         problem = problem.toPersisted(),
+        programmingLanguage = programmingLanguage,
+        participantType = participantType,
     )
 
 fun SubmissionPersisted.toDomain(): Submission =
@@ -87,4 +91,6 @@ fun SubmissionPersisted.toDomain(): Submission =
         verdict = verdict,
         creationTimeSeconds = creationTimeSeconds,
         problem = problem.toDomain(),
+        programmingLanguage = programmingLanguage,
+        participantType = participantType,
     )

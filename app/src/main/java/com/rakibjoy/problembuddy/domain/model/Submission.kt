@@ -5,4 +5,6 @@ data class Submission(
     val problem: Problem,
     val verdict: String?,
     val creationTimeSeconds: Long,
+    val programmingLanguage: String? = null,
+    val participantType: String? = null,
 )

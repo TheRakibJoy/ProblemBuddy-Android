@@ -13,7 +13,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.MaterialTheme
@@ -39,8 +45,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
+import com.rakibjoy.problembuddy.core.ui.components.AchievementRow
 import com.rakibjoy.problembuddy.core.ui.components.ActivityHeatmap
 import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
+import com.rakibjoy.problembuddy.core.ui.components.ComparisonCard
+import com.rakibjoy.problembuddy.core.ui.components.ContestRow
+import com.rakibjoy.problembuddy.core.ui.components.DayOfWeekChart
+import com.rakibjoy.problembuddy.core.ui.components.DivisionDeltasCard
+import com.rakibjoy.problembuddy.core.ui.components.FailedProblemRow
+import com.rakibjoy.problembuddy.core.ui.components.FullRatingTimeline
+import com.rakibjoy.problembuddy.core.ui.components.HourOfDayChart
+import com.rakibjoy.problembuddy.core.ui.components.LanguageBar
+import com.rakibjoy.problembuddy.core.ui.components.ProjectionCard
+import com.rakibjoy.problembuddy.core.ui.components.SnapshotRow
+import com.rakibjoy.problembuddy.core.ui.components.TagRadar
+import com.rakibjoy.problembuddy.core.ui.components.TierStackedArea
+import com.rakibjoy.problembuddy.core.ui.components.VerdictBar
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.components.Sparkline
 import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
@@ -221,24 +241,55 @@ private fun androidx.compose.foundation.lazy.LazyListScope.weakTagsTab(
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.activityTab(state: ProfileState) {
-    val activity = state.activity ?: ActivityStats.Empty
+private fun LazyListScope.activityTab(state: ProfileState) {
+    val activity = state.activity
+    if (activity == null) {
+        item(key = "activity-empty") {
+            CenterHint(text = "no activity yet — solve a problem to get started.")
+        }
+        return
+    }
 
-    item(key = "activity-heatmap") {
-        OutlinedSurfaceCard {
+    // 1. Year-ago snapshot
+    if (activity.oneYearAgo != null) {
+        item(key = "activity-snapshot") {
             Column {
-                Text(
-                    text = "SUBMISSIONS",
-                    style = MaterialTheme.typography.labelSmall,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.appExtras.textTertiary,
+                SmallSectionHeader("A YEAR AGO")
+                val today = ProfileSnapshot(
+                    timeSeconds = System.currentTimeMillis() / 1000L,
+                    rating = state.rating,
+                    solvedCount = activity.solvedByDayEpoch.values.sum(),
+                    tier = state.currentTier,
                 )
-                Spacer(Modifier.height(Spacing.sm))
-                ActivityHeatmap(solvedByDayEpoch = activity.solvedByDayEpoch)
+                SnapshotRow(oneYearAgo = activity.oneYearAgo, today = today)
             }
         }
     }
 
+    // 2. Projection
+    if (activity.projection != null) {
+        item(key = "activity-projection") {
+            Column {
+                SmallSectionHeader("NEXT TIER")
+                ProjectionCard(projection = activity.projection)
+            }
+        }
+    }
+
+    // 3. Submissions heatmap
+    if (activity.solvedByDayEpoch.isNotEmpty()) {
+        item(key = "activity-heatmap") {
+            OutlinedSurfaceCard {
+                Column {
+                    SmallSectionHeader("SUBMISSIONS")
+                    Spacer(Modifier.height(Spacing.sm))
+                    ActivityHeatmap(solvedByDayEpoch = activity.solvedByDayEpoch)
+                }
+            }
+        }
+    }
+
+    // 4. Streak row
     item(key = "activity-streak") {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -265,56 +316,314 @@ private fun androidx.compose.foundation.lazy.LazyListScope.activityTab(state: Pr
         }
     }
 
-    item(key = "rating-history") {
-        val history = activity.ratingHistory
-        OutlinedSurfaceCard {
+    // 5. Rating timeline + selected contest inline
+    if (activity.ratingHistory.isNotEmpty()) {
+        item(key = "activity-rating-timeline") {
+            val selected = remember { mutableStateOf<ContestResult?>(null) }
             Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                SmallSectionHeader("RATING HISTORY")
+                Spacer(Modifier.height(Spacing.sm))
+                FullRatingTimeline(
+                    contests = activity.contestHistory,
+                    onTap = { selected.value = it },
+                )
+                val sel = selected.value
+                if (sel != null) {
+                    Spacer(Modifier.height(Spacing.sm))
+                    OutlinedSurfaceCard {
+                        Column {
+                            Text(
+                                text = sel.name,
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            val delta = sel.newRating - sel.oldRating
+                            val deltaText = if (delta >= 0) "+$delta" else "$delta"
+                            val date = java.time.Instant.ofEpochSecond(sel.timeSeconds)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                                .toString()
+                            Text(
+                                text = "rank ${sel.rank} · $deltaText · $date",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.appExtras.textSecondary,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 6. Recent contests (last 10)
+    if (activity.contestHistory.isNotEmpty()) {
+        item(key = "activity-recent-contests") {
+            val all = activity.contestHistory.sortedByDescending { it.timeSeconds }
+            val shown = all.take(10)
+            Column {
+                SmallSectionHeader("RECENT CONTESTS")
+                if (all.size > 10) {
                     Text(
-                        text = "RATING HISTORY",
+                        text = "showing 10 of ${all.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.appExtras.textTertiary,
+                    )
+                }
+                Spacer(Modifier.height(Spacing.xs))
+                OutlinedSurfaceCard {
+                    Column {
+                        shown.forEachIndexed { idx, c ->
+                            ContestRow(contest = c)
+                            if (idx != shown.lastIndex) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(0.5.dp)
+                                        .background(MaterialTheme.appExtras.borderSubtle),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 7. Division deltas
+    if (activity.divisionDeltas.isNotEmpty()) {
+        item(key = "activity-division-deltas") {
+            Column {
+                SmallSectionHeader("BY DIVISION")
+                DivisionDeltasCard(divisions = activity.divisionDeltas)
+            }
+        }
+    }
+
+    // 8. Tier progression
+    if (activity.tierProgression.isNotEmpty()) {
+        item(key = "activity-tier-progression") {
+            Column {
+                SmallSectionHeader("PROBLEMS SOLVED OVER TIME")
+                OutlinedSurfaceCard {
+                    TierStackedArea(points = activity.tierProgression)
+                }
+            }
+        }
+    }
+
+    // 9. Tag radar
+    if (activity.tagRadar.isNotEmpty() && activity.tagRadar.any { it.count > 0 }) {
+        item(key = "activity-tag-radar") {
+            Column {
+                SmallSectionHeader("TAG COVERAGE")
+                OutlinedSurfaceCard {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TagRadar(scores = activity.tagRadar)
+                    }
+                }
+            }
+        }
+    }
+
+    // 10. First-attempt AC rate
+    if (activity.firstAttemptAcRate != null) {
+        item(key = "activity-first-ac") {
+            OutlinedSurfaceCard {
+                Column {
+                    Text(
+                        text = "first-attempt AC rate",
                         style = MaterialTheme.typography.labelSmall,
                         letterSpacing = 1.sp,
                         color = MaterialTheme.appExtras.textTertiary,
                     )
-                    if (history.isNotEmpty()) {
-                        val last = history.last().rating
-                        val peak = history.maxOf { it.rating }
-                        Text(
-                            text = "peak $peak · now $last",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.appExtras.textSecondary,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(Spacing.sm))
-                if (history.isEmpty()) {
+                    Spacer(Modifier.height(Spacing.xs))
+                    val pct = (activity.firstAttemptAcRate * 100).toInt()
                     Text(
-                        text = "compete in a rated contest to see your rating here.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.appExtras.textTertiary,
+                        text = "$pct%",
+                        style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.appExtras.accentVioletSoft,
                     )
-                } else {
-                    // Normalize to 0..1 and hand to Sparkline.
-                    val minR = history.minOf { it.rating }.toFloat()
-                    val maxR = history.maxOf { it.rating }.toFloat()
-                    val span = (maxR - minR).coerceAtLeast(1f)
-                    val normalized = history.map { (it.rating - minR) / span }
-                    Sparkline(
-                        points = normalized,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        color = state.currentTier?.palette()?.strong
-                            ?: MaterialTheme.appExtras.accentVioletSoft,
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "% of problems you nailed on your first submit.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.appExtras.textSecondary,
                     )
                 }
             }
         }
     }
+
+    // 11. Verdict breakdown
+    if (activity.verdictBreakdown.isNotEmpty()) {
+        item(key = "activity-verdicts") {
+            Column {
+                SmallSectionHeader("VERDICTS (90D)")
+                OutlinedSurfaceCard {
+                    VerdictBar(counts = activity.verdictBreakdown)
+                }
+            }
+        }
+    }
+
+    // 12. Failed queue
+    if (activity.failedQueue.isNotEmpty()) {
+        item(key = "activity-failed-queue") {
+            val context = LocalContext.current
+            Column {
+                SmallSectionHeader("RECENTLY FAILED")
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    activity.failedQueue.take(8).forEach { item ->
+                        FailedProblemRow(
+                            item = item,
+                            onRetry = {
+                                val url = "https://codeforces.com/problemset/problem/${item.contestId}/${item.problemIndex}"
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // 13. When you solve — day-of-week + hour-of-day
+    val anyDow = activity.dayOfWeekCounts.any { it > 0 }
+    val anyHour = activity.hourOfDayCounts.any { it > 0 }
+    if (anyDow || anyHour) {
+        item(key = "activity-when") {
+            Column {
+                SmallSectionHeader("WHEN YOU SOLVE")
+                OutlinedSurfaceCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                        DayOfWeekChart(dayCounts = activity.dayOfWeekCounts)
+                        HourOfDayChart(hourCounts = activity.hourOfDayCounts)
+                    }
+                }
+            }
+        }
+    }
+
+    // 14. Language distribution
+    if (activity.languageCounts.isNotEmpty()) {
+        item(key = "activity-languages") {
+            Column {
+                SmallSectionHeader("LANGUAGES")
+                OutlinedSurfaceCard {
+                    LanguageBar(counts = activity.languageCounts)
+                }
+            }
+        }
+    }
+
+    // 15. Virtual vs rated
+    if (activity.virtualParticipations > 0 || activity.ratedParticipations > 0) {
+        item(key = "activity-virtual-rated") {
+            OutlinedSurfaceCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "RATED",
+                            style = MaterialTheme.typography.labelSmall,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.appExtras.textTertiary,
+                        )
+                        Text(
+                            text = activity.ratedParticipations.toString(),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "VIRTUAL",
+                            style = MaterialTheme.typography.labelSmall,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.appExtras.textTertiary,
+                        )
+                        Text(
+                            text = activity.virtualParticipations.toString(),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.appExtras.textSecondary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // 16. Milestones
+    if (activity.milestones.isNotEmpty()) {
+        item(key = "activity-milestones") {
+            Column {
+                SmallSectionHeader("MILESTONES")
+                OutlinedSurfaceCard {
+                    Column {
+                        activity.milestones.forEach { m ->
+                            AchievementRow(milestone = m)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 17. Compare
+    val compareHandle = state.compareHandle
+    if (!compareHandle.isNullOrBlank() && !state.handle.isNullOrBlank()) {
+        item(key = "activity-compare") {
+            val context = LocalContext.current
+            Column {
+                ComparisonCard(
+                    myHandle = state.handle,
+                    myRating = state.rating,
+                    myTier = state.currentTier,
+                    theirHandle = compareHandle,
+                    theirRating = null,
+                    theirTier = null,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = "rating from codeforces.com/profile/$compareHandle",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.appExtras.accentVioletSoft,
+                    modifier = Modifier.clickable {
+                        runCatching {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://codeforces.com/profile/$compareHandle"),
+                                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmallSectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = 1.sp,
+        color = MaterialTheme.appExtras.textTertiary,
+    )
 }
 
 @Composable
@@ -574,6 +883,41 @@ private fun ProfileScreenLoadingPreview() {
     }
 }
 
+private fun sampleActivity(): ActivityStats {
+    val now = System.currentTimeMillis() / 1000L
+    return ActivityStats.Empty.copy(
+        solvedByDayEpoch = mapOf(20000L to 2, 20001L to 1, 20002L to 3),
+        currentStreakDays = 5,
+        longestStreakDays = 21,
+        solvedThisYear = 120,
+        ratingHistory = listOf(
+            RatingPoint(now - 86400L * 60, 1450),
+            RatingPoint(now - 86400L * 30, 1510),
+            RatingPoint(now, 1540),
+        ),
+        contestHistory = listOf(
+            ContestResult(1800, "Codeforces Round 900 (Div. 2)", 120, 1450, 1510, now - 86400L * 30, "Div 2"),
+            ContestResult(1810, "Educational Codeforces Round 155", 340, 1510, 1499, now - 86400L * 20, "Edu"),
+            ContestResult(1820, "Codeforces Round 910 (Div. 2)", 85, 1499, 1540, now - 86400L * 5, "Div 2"),
+        ),
+        tagRadar = listOf(
+            TagScore("dp", 8),
+            TagScore("graphs", 5),
+            TagScore("math", 3),
+        ),
+        milestones = listOf(
+            Milestone(now - 86400L * 200, "First accepted solution", "4A"),
+            Milestone(now - 86400L * 30, "100th accepted solution", "Reached 100 solves"),
+        ),
+        verdictBreakdown = mapOf("OK" to 42, "WRONG_ANSWER" to 18, "TIME_LIMIT_EXCEEDED" to 5),
+        languageCounts = mapOf("GNU C++17" to 80, "Python 3" to 12),
+        dayOfWeekCounts = intArrayOf(4, 6, 8, 10, 7, 3, 2),
+        hourOfDayCounts = IntArray(24) { if (it in 18..23) it - 10 else 1 },
+        ratedParticipations = 3,
+        virtualParticipations = 1,
+    )
+}
+
 @Preview(name = "Profile - Legendary")
 @Composable
 private fun ProfileScreenLegendaryPreview() {
@@ -592,6 +936,7 @@ private fun ProfileScreenLegendaryPreview() {
                     WeakTagStat("graphs", 0.48f),
                     WeakTagStat("math", 0.71f),
                 ),
+                activity = sampleActivity(),
             ),
             onIntent = {},
         )
@@ -615,6 +960,7 @@ private fun ProfileScreenSpecialistPreview() {
                     WeakTagStat("dp", 0.22f),
                     WeakTagStat("greedy", 0.35f),
                 ),
+                activity = sampleActivity(),
             ),
             onIntent = {},
         )

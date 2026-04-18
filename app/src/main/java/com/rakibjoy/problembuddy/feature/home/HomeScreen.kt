@@ -30,6 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -141,6 +142,23 @@ fun HomeScreen(
                         solved = state.problemsSolved,
                         streak = state.streakDays,
                     )
+                }
+
+                item(key = "weekly-goal") {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SectionHeaderRow(
+                            title = "WEEKLY GOAL",
+                            actionLabel = "edit in settings",
+                            onActionClick = { onIntent(HomeIntent.SettingsClicked) },
+                        )
+                        // TODO: swap to shared GoalProgressCard once Agent Beta's
+                        // component is available in core.ui.components.
+                        GoalProgressCardLocal(
+                            label = "problems this week",
+                            current = state.weeklySolved,
+                            target = state.weeklyGoal,
+                        )
+                    }
                 }
 
                 state.weakTagTrend?.let { trend ->
@@ -466,6 +484,49 @@ private fun problemMeta(p: Problem): String {
     // plumbing it through would need contest.list lookups per render.
     val rating = p.rating?.toString() ?: "—"
     return "$rating · ${p.problemIndex}"
+}
+
+// ──────────────── Weekly goal (local fallback) ────────────────
+// TODO: Replace with shared GoalProgressCard from core.ui.components
+// once Agent Beta's component lands.
+@Composable
+private fun GoalProgressCardLocal(label: String, current: Int, target: Int) {
+    val extras = MaterialTheme.appExtras
+    val shape = RoundedCornerShape(16.dp)
+    val safeTarget = target.coerceAtLeast(1)
+    val progress = (current.toFloat() / safeTarget.toFloat()).coerceIn(0f, 1f)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(extras.surfaceElevated, shape)
+            .border(0.5.dp, extras.borderSubtle, shape)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "$current / $target",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color = extras.accentVioletSoft,
+            )
+        }
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = extras.borderSubtle,
+        )
+    }
 }
 
 // ──────────────── Previews ────────────────

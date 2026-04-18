@@ -48,4 +48,6 @@ fun SubmissionDto.toDomain(): Submission = Submission(
     problem = problem.toDomain(),
     verdict = verdict,
     creationTimeSeconds = creationTimeSeconds,
+    programmingLanguage = programmingLanguage,
+    participantType = participantType,
 )

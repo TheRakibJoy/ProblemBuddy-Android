@@ -49,6 +49,12 @@ class SettingsViewModel @Inject constructor(
         settingsStore.difficultyOffset
             .onEach { v -> _state.update { it.copy(difficultyOffset = v) } }
             .launchIn(viewModelScope)
+        settingsStore.compareHandle
+            .onEach { v -> _state.update { it.copy(compareHandle = v.orEmpty()) } }
+            .launchIn(viewModelScope)
+        settingsStore.weeklyGoal
+            .onEach { v -> _state.update { it.copy(weeklyGoal = v) } }
+            .launchIn(viewModelScope)
     }
 
     fun onIntent(intent: SettingsIntent) {
@@ -61,6 +67,13 @@ class SettingsViewModel @Inject constructor(
             }
             is SettingsIntent.SetDifficultyOffset -> viewModelScope.launch {
                 settingsStore.setDifficultyOffset(intent.value)
+            }
+            is SettingsIntent.SetCompareHandle -> viewModelScope.launch {
+                val trimmed = intent.handle.trim()
+                settingsStore.setCompareHandle(trimmed.ifBlank { null })
+            }
+            is SettingsIntent.SetWeeklyGoal -> viewModelScope.launch {
+                settingsStore.setWeeklyGoal(intent.value)
             }
             SettingsIntent.RequestResetCorpus ->
                 _state.update { it.copy(showResetCorpusConfirm = true) }

@@ -8,4 +8,6 @@ data class SubmissionDto(
     val problem: ProblemDto,
     val verdict: String? = null,
     val creationTimeSeconds: Long,
+    val programmingLanguage: String? = null,
+    val participantType: String? = null,
 )

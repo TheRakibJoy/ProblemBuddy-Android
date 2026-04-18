@@ -6,6 +6,8 @@ sealed interface SettingsIntent {
     data class SetTheme(val mode: ThemeMode) : SettingsIntent
     data class SetRecsPerLoad(val value: Int) : SettingsIntent
     data class SetDifficultyOffset(val value: Int) : SettingsIntent
+    data class SetCompareHandle(val handle: String) : SettingsIntent
+    data class SetWeeklyGoal(val value: Int) : SettingsIntent
     data object RequestResetCorpus : SettingsIntent
     data object ConfirmResetCorpus : SettingsIntent
     data object DismissResetCorpusConfirm : SettingsIntent

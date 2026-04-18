@@ -17,6 +17,9 @@ data class HomeState(
     val ratingDelta: Int? = null,
     val problemsSolved: Int? = null,
     val streakDays: Int? = null,
+    val weeklyGoal: Int = 10,
+    val weeklySolved: Int = 0,
+    // count of AC'd problems in last 7 days
     val weakTagTrend: WeakTagTrend? = null,
     val upsolve: List<UpsolveProblem> = emptyList(),
     val todayPicks: List<TodayPick> = emptyList(),

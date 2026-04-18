@@ -48,6 +48,11 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            settingsStore.weeklyGoal.distinctUntilChanged().collect { goal ->
+                _state.update { it.copy(weeklyGoal = goal) }
+            }
+        }
+        viewModelScope.launch {
             combine(
                 settingsStore.cfHandle.distinctUntilChanged(),
                 trainingJobRepository.observeLatest(),
@@ -130,8 +135,17 @@ class HomeViewModel @Inject constructor(
     private fun fetchSolvedCount(handle: String) {
         viewModelScope.launch {
             codeforces.userStatus(handle, from = 1, count = 100_000).onSuccess { subs ->
-                val solvedKeys = subs.asSequence()
-                    .filter { it.verdict == "OK" }
+                val acceptedSubs = subs.asSequence().filter { it.verdict == "OK" }.toList()
+                val solvedKeys = acceptedSubs.asSequence()
+                    .mapNotNull { sub ->
+                        val p = sub.problem
+                        if (p.contestId == 0 || p.problemIndex.isBlank()) null
+                        else p.contestId to p.problemIndex
+                    }
+                    .toSet()
+                val weekCutoff = (System.currentTimeMillis() / 1000L) - 7L * 86_400L
+                val weeklyKeys = acceptedSubs.asSequence()
+                    .filter { it.creationTimeSeconds >= weekCutoff }
                     .mapNotNull { sub ->
                         val p = sub.problem
                         if (p.contestId == 0 || p.problemIndex.isBlank()) null
@@ -139,7 +153,10 @@ class HomeViewModel @Inject constructor(
                     }
                     .toSet()
                 _state.update {
-                    if (it.handle == handle) it.copy(problemsSolved = solvedKeys.size) else it
+                    if (it.handle == handle) it.copy(
+                        problemsSolved = solvedKeys.size,
+                        weeklySolved = weeklyKeys.size,
+                    ) else it
                 }
             }
         }
