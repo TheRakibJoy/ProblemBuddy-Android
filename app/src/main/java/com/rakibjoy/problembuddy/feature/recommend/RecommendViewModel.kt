@@ -8,7 +8,6 @@ import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.InteractionRepository
 import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
-import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.usecase.GetRecommendationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -28,7 +27,6 @@ class RecommendViewModel @Inject constructor(
     private val interactionRepository: InteractionRepository,
     private val problemRepository: ProblemRepository,
     private val settingsStore: SettingsStore,
-    private val reviewRepository: ReviewRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RecommendState())
@@ -63,14 +61,7 @@ class RecommendViewModel @Inject constructor(
                 refresh()
             }
             is RecommendIntent.MarkSolved -> viewModelScope.launch {
-                val problemId = recordInteraction(intent.problem, status = Interaction.Status.SOLVED)
-                if (problemId != null) {
-                    reviewRepository.scheduleInitial(
-                        problemId = problemId,
-                        contestId = intent.problem.contestId,
-                        problemIndex = intent.problem.problemIndex,
-                    )
-                }
+                recordInteraction(intent.problem, status = Interaction.Status.SOLVED)
                 _state.update { it.copy(problems = it.problems.filterNot { p -> p.sameAs(intent.problem) }) }
                 _effects.send(RecommendEffect.Toast("Marked solved"))
             }
@@ -106,8 +97,8 @@ class RecommendViewModel @Inject constructor(
         )
     }
 
-    private suspend fun recordInteraction(problem: Problem, status: Interaction.Status): Long? {
-        val id = problemRepository.findId(problem.contestId, problem.problemIndex) ?: return null
+    private suspend fun recordInteraction(problem: Problem, status: Interaction.Status) {
+        val id = problemRepository.findId(problem.contestId, problem.problemIndex) ?: return
         interactionRepository.upsert(
             Interaction(
                 problemId = id,
@@ -115,7 +106,6 @@ class RecommendViewModel @Inject constructor(
                 createdAt = System.currentTimeMillis(),
             ),
         )
-        return id
     }
 
     private fun Problem.sameAs(other: Problem): Boolean =

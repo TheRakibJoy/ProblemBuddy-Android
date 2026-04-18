@@ -8,7 +8,6 @@ import com.rakibjoy.problembuddy.domain.repository.CounterRepository
 import com.rakibjoy.problembuddy.domain.repository.HandleRepository
 import com.rakibjoy.problembuddy.domain.repository.InteractionRepository
 import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
-import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +32,6 @@ class SettingsViewModel @Inject constructor(
     private val handleRepository: HandleRepository,
     private val interactionRepository: InteractionRepository,
     private val trainingJobRepository: TrainingJobRepository,
-    private val reviewRepository: ReviewRepository,
     private val dailyProblemScheduler: DailyProblemScheduler,
 ) : ViewModel() {
 
@@ -137,7 +135,6 @@ class SettingsViewModel @Inject constructor(
                 counterRepository.clear()
                 handleRepository.clear()
                 trainingJobRepository.clearAll()
-                reviewRepository.clearAll()
             }
             _state.update { it.copy(resetCorpusBusy = false) }
             _effects.send(SettingsEffect.ShowToast("Corpus cleared"))
@@ -153,7 +150,6 @@ class SettingsViewModel @Inject constructor(
                 handleRepository.clear()
                 interactionRepository.clear()
                 trainingJobRepository.clearAll()
-                reviewRepository.clearAll()
             }
             settingsStore.clearDailyProblem()
             settingsStore.clearAll()
