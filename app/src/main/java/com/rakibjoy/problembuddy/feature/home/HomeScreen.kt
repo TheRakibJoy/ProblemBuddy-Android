@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -143,7 +145,10 @@ fun HomeScreen(
 
                 state.weakTagTrend?.let { trend ->
                     item(key = "weak-trend") {
-                        WeakTagTrendSection(trend = trend, onAllTags = { /* TODO */ })
+                        WeakTagTrendSection(
+                            trend = trend,
+                            onAllTags = { onIntent(HomeIntent.ProfileClicked) },
+                        )
                     }
                 }
 
@@ -167,7 +172,7 @@ fun HomeScreen(
                         SectionHeaderRow(
                             title = "UPSOLVE QUEUE",
                             actionLabel = "from last contest",
-                            onActionClick = { /* TODO: link to contest history */ },
+                            onActionClick = { onIntent(HomeIntent.RecommendClicked) },
                         )
                     }
                     for ((idx, up) in state.upsolve.take(3).withIndex()) {
@@ -237,8 +242,12 @@ private fun greetingForHour(hour: Int): String = when (hour) {
 @Composable
 private fun StatsRow(rating: Int?, ratingDelta: Int?, solved: Int?, streak: Int?) {
     val extras = MaterialTheme.appExtras
+    // IntrinsicSize.Max so all three cards adopt the height of the tallest —
+    // keeps the grid visually even even when only some cards have delta rows.
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Max),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val deltaText = ratingDelta
@@ -250,13 +259,13 @@ private fun StatsRow(rating: Int?, ratingDelta: Int?, solved: Int?, streak: Int?
             accent = extras.accentVioletSoft,
             deltaText = deltaText,
             deltaIsPositive = (ratingDelta ?: 0) >= 0,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
         StatCard(
             value = solved?.toString() ?: "—",
             label = "SOLVED",
             accent = extras.accentCyanSoft,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
         StatCard(
             value = streak?.toString() ?: "—",
@@ -264,7 +273,7 @@ private fun StatsRow(rating: Int?, ratingDelta: Int?, solved: Int?, streak: Int?
             accent = Color(0xFFF59E0B),
             deltaText = if (streak != null) "days" else null,
             deltaIsPositive = true,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
     }
 }
@@ -453,8 +462,8 @@ private fun ActionIconButton(
 }
 
 private fun problemMeta(p: Problem): String {
-    // e.g. "1854 · G · div. 1" — div detection from contestId is lossy, so we
-    // use a simple fallback. TODO: plumb division info through Problem model.
+    // e.g. "1854 · G" — Codeforces division isn't in the Problem model today;
+    // plumbing it through would need contest.list lookups per render.
     val rating = p.rating?.toString() ?: "—"
     return "$rating · ${p.problemIndex}"
 }

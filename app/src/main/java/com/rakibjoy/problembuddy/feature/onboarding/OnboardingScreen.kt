@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.rakibjoy.problembuddy.R
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Person
@@ -222,12 +224,11 @@ private fun HeroOrb() {
             .background(brush),
         contentAlignment = Alignment.Center,
     ) {
-        // decorative
-        Icon(
-            imageVector = Icons.Default.Bolt,
+        // decorative — app launcher icon
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = null,
-            tint = primary,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(72.dp),
         )
     }
 }

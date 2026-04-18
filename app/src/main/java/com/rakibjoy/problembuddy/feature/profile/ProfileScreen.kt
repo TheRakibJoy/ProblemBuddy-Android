@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
+import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import com.rakibjoy.problembuddy.core.ui.components.HandleText
@@ -75,17 +76,20 @@ fun ProfileScreen(
     onNavigateToTrain: (() -> Unit)? = null,
 ) {
     GradientSurface {
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                state.loading -> LoadingContent()
-                state.error != null -> ErrorContent(
-                    message = state.error,
-                    onRetry = { onIntent(ProfileIntent.Refresh) },
-                )
-                else -> ProfileContent(
-                    state = state,
-                    onNavigateToTrain = onNavigateToTrain,
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            AppTopBar()
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    state.loading -> LoadingContent()
+                    state.error != null -> ErrorContent(
+                        message = state.error,
+                        onRetry = { onIntent(ProfileIntent.Refresh) },
+                    )
+                    else -> ProfileContent(
+                        state = state,
+                        onNavigateToTrain = onNavigateToTrain,
+                    )
+                }
             }
         }
     }

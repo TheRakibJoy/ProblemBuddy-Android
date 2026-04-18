@@ -21,19 +21,31 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.annotation.DrawableRes
+import com.rakibjoy.problembuddy.R
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
 import com.rakibjoy.problembuddy.core.ui.theme.appExtras
 
 /** Primary app tabs surfaced in the bottom nav. */
-enum class NavDestination(val label: String, val icon: ImageVector) {
-    Home("home", Icons.Outlined.Home),
-    Recommend("recommend", Icons.Filled.Search),
-    Train("train", Icons.Filled.Bolt),
-    Profile("profile", Icons.Filled.Person),
+enum class NavDestination(
+    val label: String,
+    val icon: ImageVector? = null,
+    @DrawableRes val iconRes: Int? = null,
+    /** `true` → render via Image without tinting (e.g. full-color app icon). */
+    val untinted: Boolean = false,
+) {
+    Home("home", icon = Icons.Outlined.Home),
+    Recommend("recommend", icon = Icons.Filled.Search),
+    Train("train", icon = Icons.Filled.Bolt),
+    Profile("profile", icon = Icons.Filled.Person),
 }
 
 /**
@@ -79,12 +91,23 @@ fun AppBottomBar(
                         )
                         .padding(vertical = 4.dp),
                 ) {
-                    Icon(
-                        imageVector = dest.icon,
-                        contentDescription = dest.label,
-                        tint = tint,
-                        modifier = Modifier.size(20.dp),
-                    )
+                    when {
+                        dest.iconRes != null -> {
+                            val alpha = if (enabled) 1f else 0.35f
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(dest.iconRes),
+                                contentDescription = dest.label,
+                                modifier = Modifier.size(24.dp).alpha(alpha),
+                                colorFilter = if (dest.untinted) null else ColorFilter.tint(tint),
+                            )
+                        }
+                        dest.icon != null -> Icon(
+                            imageVector = dest.icon,
+                            contentDescription = dest.label,
+                            tint = tint,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = dest.label,

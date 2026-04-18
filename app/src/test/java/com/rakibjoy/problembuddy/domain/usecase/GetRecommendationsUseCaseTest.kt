@@ -91,6 +91,7 @@ class GetRecommendationsUseCaseTest {
     @Test
     fun returnsFilteredRecommendations() = runTest {
         every { settingsStore.cfHandle } returns flowOf(handle)
+        every { settingsStore.difficultyOffset } returns flowOf(0)
         coEvery { codeforces.userInfoWithFallback(handle) } returns Result.success(
             Fresh(
                 value = UserInfo(handle = handle, rating = 1500, maxRating = 1500, rank = null, maxRank = null),

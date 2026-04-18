@@ -20,6 +20,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Home surfaces a dashboard: greeting, rating / solved / streak stats, weak-tag
+ * trend, today's picks, upsolve queue, and a primary CTA.
+ *
+ * `streakDays`, `weakTagTrend`, `upsolve`, and `todayPicks` are still computed
+ * lazily — they require contest-standings lookups and a recommendation pass
+ * per load, which haven't been implemented yet. Their defaults (null / empty)
+ * hide the corresponding sections on the Home screen so the layout stays
+ * correct in the meantime.
+ */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val settingsStore: SettingsStore,
@@ -28,9 +38,6 @@ class HomeViewModel @Inject constructor(
     private val problemDao: ProblemDao,
 ) : ViewModel() {
 
-    // TODO(redesign): wire real data for ratingDelta, problemsSolved, streakDays,
-    //   weakTagTrend, upsolve, todayPicks. Defaults (null / empty list) render
-    //   an acceptable empty state today.
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
 
@@ -52,15 +59,18 @@ class HomeViewModel @Inject constructor(
                             handle = handle,
                             greeting = greeting,
                             latestJob = job,
-                            // keep existing rating if handle unchanged; clear if handle removed
                             rating = if (handle == null) null else it.rating,
                             maxRating = if (handle == null) null else it.maxRating,
+                            ratingDelta = if (handle == null) null else it.ratingDelta,
+                            problemsSolved = if (handle == null) null else it.problemsSolved,
                         )
                     }
                     refreshCorpus()
                     if (handle != null && handle != lastHandleFetched) {
                         lastHandleFetched = handle
                         fetchUserInfo(handle)
+                        fetchRatingDelta(handle)
+                        fetchSolvedCount(handle)
                     } else if (handle == null) {
                         lastHandleFetched = null
                     }
@@ -100,6 +110,36 @@ class HomeViewModel @Inject constructor(
                             avatarUrl = info.titlePhotoUrl ?: info.avatarUrl,
                         )
                     } else it
+                }
+            }
+        }
+    }
+
+    private fun fetchRatingDelta(handle: String) {
+        viewModelScope.launch {
+            codeforces.userRating(handle).onSuccess { changes ->
+                val last = changes.lastOrNull() ?: return@onSuccess
+                val delta = last.newRating - last.oldRating
+                _state.update {
+                    if (it.handle == handle) it.copy(ratingDelta = delta) else it
+                }
+            }
+        }
+    }
+
+    private fun fetchSolvedCount(handle: String) {
+        viewModelScope.launch {
+            codeforces.userStatus(handle, from = 1, count = 100_000).onSuccess { subs ->
+                val solvedKeys = subs.asSequence()
+                    .filter { it.verdict == "OK" }
+                    .mapNotNull { sub ->
+                        val p = sub.problem
+                        if (p.contestId == 0 || p.problemIndex.isBlank()) null
+                        else p.contestId to p.problemIndex
+                    }
+                    .toSet()
+                _state.update {
+                    if (it.handle == handle) it.copy(problemsSolved = solvedKeys.size) else it
                 }
             }
         }

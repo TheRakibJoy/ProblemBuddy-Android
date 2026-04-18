@@ -268,7 +268,7 @@ private fun AppearanceGroup(
         SettingsRow(
             icon = Icons.Outlined.Palette,
             title = "theme",
-            subtitle = "match your system or pick a side",
+            subtitle = "follow your device or lock to light / dark.",
             belowContent = {
                 val modes = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
                 val labels = listOf("system", "light", "dark")
@@ -301,6 +301,7 @@ private fun RecommendationsGroup(
         SettingsRow(
             icon = Icons.Outlined.Tune,
             title = "problems per load",
+            subtitle = "how many problems recommend shows at once.",
             trailing = {
                 Text(
                     text = "$recsPerLoad",
@@ -324,6 +325,7 @@ private fun RecommendationsGroup(
         SettingsRow(
             icon = Icons.AutoMirrored.Outlined.TrendingUp,
             title = "difficulty offset",
+            subtitle = "shift target problem rating up or down from your own.",
             trailing = {
                 val signed = when {
                     difficultyOffset > 0 -> "+$difficultyOffset"
@@ -361,7 +363,7 @@ private fun DataGroup(
         SettingsRow(
             icon = Icons.Default.RestartAlt,
             title = "reset corpus",
-            subtitle = "keep your handle, clear trained problems.",
+            subtitle = "clears trained problems and counters. keeps your handle and settings.",
             trailing = {
                 TextButton(
                     onClick = { onIntent(SettingsIntent.RequestResetCorpus) },
@@ -382,7 +384,7 @@ private fun DataGroup(
             icon = Icons.Default.DeleteForever,
             iconTint = MaterialTheme.colorScheme.error,
             title = "delete all data",
-            subtitle = "wipes everything and returns to onboarding.",
+            subtitle = "wipes handle, corpus, settings, and interactions. sends you back to onboarding.",
             trailing = {
                 Button(
                     onClick = { onIntent(SettingsIntent.RequestDeleteAll) },
@@ -406,7 +408,7 @@ private fun AboutGroup() {
         SettingsRow(
             icon = Icons.Outlined.Favorite,
             title = "made by RakibJoy",
-            subtitle = "idea, algorithms, and original web app",
+            subtitle = "tap to open his codeforces profile.",
             trailing = {
                 TextButton(onClick = {
                     val intent = Intent(
@@ -422,6 +424,7 @@ private fun AboutGroup() {
         SettingsRow(
             icon = Icons.Outlined.Info,
             title = "version",
+            subtitle = "app build currently installed on your device.",
             trailing = {
                 Text(
                     text = runCatching { BuildConfig.VERSION_NAME }.getOrDefault("1.0"),
@@ -433,7 +436,7 @@ private fun AboutGroup() {
         SettingsRow(
             icon = Icons.Outlined.Code,
             title = "view source on GitHub",
-            subtitle = "TheRakibJoy/ProblemBuddy-Android",
+            subtitle = "open the repository in your browser.",
             trailing = {
                 TextButton(onClick = {
                     val intent = Intent(
