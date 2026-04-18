@@ -17,6 +17,9 @@ interface InteractionDao {
     @Query("SELECT * FROM interactions")
     fun observeAll(): Flow<List<InteractionEntity>>
 
+    @Query("SELECT * FROM interactions")
+    suspend fun getAll(): List<InteractionEntity>
+
     @Query("DELETE FROM interactions")
     suspend fun deleteAll()
 }

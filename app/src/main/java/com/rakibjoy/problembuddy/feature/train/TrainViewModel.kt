@@ -2,15 +2,14 @@ package com.rakibjoy.problembuddy.feature.train
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rakibjoy.problembuddy.core.database.dao.CounterDao
-import com.rakibjoy.problembuddy.core.database.dao.HandleDao
-import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
-import com.rakibjoy.problembuddy.core.database.dao.TrainingJobDao
 import com.rakibjoy.problembuddy.core.work.IngestScheduler
 import com.rakibjoy.problembuddy.domain.model.CodeforcesException
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.model.TrainingJob
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
+import com.rakibjoy.problembuddy.domain.repository.CounterRepository
+import com.rakibjoy.problembuddy.domain.repository.HandleRepository
+import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
 import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
 import com.rakibjoy.problembuddy.domain.util.HandleValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,10 +31,9 @@ class TrainViewModel @Inject constructor(
     private val codeforces: CodeforcesRepository,
     private val trainingJobRepository: TrainingJobRepository,
     private val ingestScheduler: IngestScheduler,
-    private val problemDao: ProblemDao,
-    private val counterDao: CounterDao,
-    private val handleDao: HandleDao,
-    private val trainingJobDao: TrainingJobDao,
+    private val problemRepository: ProblemRepository,
+    private val counterRepository: CounterRepository,
+    private val handleRepository: HandleRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TrainState())
@@ -64,9 +62,9 @@ class TrainViewModel @Inject constructor(
         // Corpus overview — total problems + distinct tags stream.
         viewModelScope.launch {
             combine(
-                problemDao.observeTotalCount(),
-                counterDao.observeDistinctTagCount(),
-                handleDao.observeAll(),
+                problemRepository.observeTotalCount(),
+                counterRepository.observeDistinctTagCount(),
+                handleRepository.observeAll(),
             ) { total, distinctTags, handles ->
                 Triple(total, distinctTags, handles.size)
             }.collect { (total, distinctTags, handleCount) ->
@@ -85,17 +83,17 @@ class TrainViewModel @Inject constructor(
         // Handle history — join handle list with training job info for timestamps.
         viewModelScope.launch {
             combine(
-                handleDao.observeAll(),
-                trainingJobDao.observeAll(),
+                handleRepository.observeAll(),
+                trainingJobRepository.observeAll(),
             ) { handles, jobs ->
                 val latestByHandle = jobs.groupBy { it.handle }
                     .mapValues { (_, list) -> list.maxByOrNull { it.updatedAt } }
-                handles.map { h ->
-                    val latest = latestByHandle[h.handle]
+                handles.map { handleName ->
+                    val latest = latestByHandle[handleName]
                     TrainedHandle(
-                        handle = h.handle,
+                        handle = handleName,
                         lastRunAtMillis = latest?.updatedAt,
-                        lastStatus = latest?.let { parseStatus(it.status) },
+                        lastStatus = latest?.status,
                         problemsAddedApprox = null,
                     )
                 }.sortedByDescending { it.lastRunAtMillis ?: 0 }
@@ -185,10 +183,10 @@ class TrainViewModel @Inject constructor(
 
     private fun onRemove(handle: String) {
         viewModelScope.launch {
-            // We don't have a per-handle DELETE on HandleDao yet — so we clear
-            // the training-job trace for this handle and leave the handle row
-            // untouched. The row will disappear once the user resets the corpus.
-            trainingJobDao.deleteByHandle(handle)
+            // We don't have a per-handle DELETE on HandleRepository yet — so we
+            // clear the training-job trace for this handle and leave the handle
+            // row untouched. The row will disappear once the user resets the corpus.
+            trainingJobRepository.deleteByHandle(handle)
             _effects.send(TrainEffect.ShowToast("Cleared history for $handle"))
         }
     }
@@ -203,19 +201,10 @@ class TrainViewModel @Inject constructor(
 
     private suspend fun refreshPerTierCounts() {
         val counts = Tier.entries.associateWith { tier ->
-            runCatching { problemDao.countByTier(tier.name.lowercase()) }.getOrDefault(0)
+            runCatching { problemRepository.countByTier(tier) }.getOrDefault(0)
         }
-        val lastSync = runCatching { trainingJobDao.observeAll() }.getOrNull()
         _state.update {
             it.copy(corpus = it.corpus.copy(perTierCounts = counts, lastSyncAtMillis = it.activeJob?.updatedAt))
         }
-    }
-
-    private fun parseStatus(raw: String): TrainingJob.Status? = when (raw.lowercase()) {
-        "queued" -> TrainingJob.Status.QUEUED
-        "running" -> TrainingJob.Status.RUNNING
-        "success" -> TrainingJob.Status.SUCCESS
-        "failed" -> TrainingJob.Status.FAILED
-        else -> null
     }
 }

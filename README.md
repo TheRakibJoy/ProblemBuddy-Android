@@ -100,7 +100,6 @@ The APK is signed with a debug key, so Android shows an "unknown source" warning
 | Async | Coroutines + Flow |
 | Navigation | androidx.navigation.compose 2.8 (type-safe destinations) |
 | Typography | `FontFamily.Monospace` (system) |
-| Telemetry | Firebase Analytics (always on), Firebase Crashlytics (release only) |
 | Testing | JUnit 5 + MockK + Turbine (unit); Compose UI Test + Room `MigrationTestHelper` (instrumented) |
 | Min / Target SDK | 26 / 35 |
 
@@ -141,7 +140,6 @@ and data are plain Kotlin + Coroutines.
 ```
 app/src/main/java/com/rakibjoy/problembuddy/
 ├── ProblemBuddyApp.kt            # @HiltAndroidApp + WorkManager Configuration.Provider
-│                                 # + Firebase Analytics / Crashlytics init
 ├── MainActivity.kt               # Theme + NavHost host
 ├── Navigation.kt                 # Type-safe destinations + bottom bar
 ├── AppRootViewModel.kt           # Decides Onboarding vs Home at launch
@@ -240,10 +238,6 @@ Release builds enable R8 minification and resource shrinking. See
 kotlinx.serialization DTOs, Retrofit service interfaces (R8 full-mode recipe),
 the `IngestWorker` and `DailyProblemWorker`, etc.
 
-Firebase requires `app/google-services.json` to be present. The checked-in file
-ships with the project; replace it with your own Firebase project config if
-you're forking.
-
 ### Requirements
 
 - JDK 17
@@ -294,12 +288,8 @@ Three GitHub Actions workflows in [`.github/workflows/`](.github/workflows):
 
 - Your Codeforces handle, corpus, interactions, reviews, and settings stay
   on-device in Room and DataStore.
-- The app makes public, read-only calls to `codeforces.com/api/`. Nothing from
-  your practice history leaves the device to anywhere else.
-- Firebase Analytics is on to understand aggregate feature usage (screen
-  names, button taps). Firebase Crashlytics is on in release builds only to
-  collect stack traces of crashes. Neither sends your Codeforces handle,
-  submissions, or corpus.
+- The app makes public, read-only calls to `codeforces.com/api/`. Nothing else
+  leaves the device — no telemetry, no crash reporting, no analytics.
 
 ## Contributing
 

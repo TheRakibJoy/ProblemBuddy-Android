@@ -2,12 +2,13 @@ package com.rakibjoy.problembuddy.feature.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rakibjoy.problembuddy.core.database.dao.CounterDao
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.domain.model.RatingChange
 import com.rakibjoy.problembuddy.domain.model.Submission
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
+import com.rakibjoy.problembuddy.domain.repository.CounterRepository
+import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
 import com.rakibjoy.problembuddy.domain.usecase.ComputeWeakTagsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -37,8 +38,8 @@ class ProfileViewModel @Inject constructor(
     private val settingsStore: SettingsStore,
     private val codeforces: CodeforcesRepository,
     private val computeWeakTags: ComputeWeakTagsUseCase,
-    private val counterDao: CounterDao,
-    private val problemDao: com.rakibjoy.problembuddy.core.database.dao.ProblemDao,
+    private val counterRepository: CounterRepository,
+    private val problemRepository: ProblemRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileState())
@@ -72,8 +73,9 @@ class ProfileViewModel @Inject constructor(
         compareFetchJob?.cancel()
         if (handle == null) return
         compareFetchJob = viewModelScope.launch {
-            codeforces.userInfo(handle)
-                .onSuccess { info ->
+            codeforces.userInfoWithFallback(handle)
+                .onSuccess { fresh ->
+                    val info = fresh.value
                     val tier = Tier.forMaxRating(info.maxRating ?: info.rating ?: 0)
                     _state.update {
                         if (it.compareHandle == handle) {
@@ -176,7 +178,7 @@ class ProfileViewModel @Inject constructor(
 
                 val weakTagNames = computeWeakTags(tier, solvedTagCounts)
 
-                val corpus: Map<String, Int> = counterDao.getByTier(tier.name.lowercase())
+                val corpus: Map<String, Int> = counterRepository.getByTier(tier)
                     .associate { it.tagName to it.count }
 
                 val weakTags = weakTagNames.map { tag ->
@@ -219,7 +221,7 @@ class ProfileViewModel @Inject constructor(
                     .toSet()
                     .size
                 val corpusInTier = runCatching {
-                    problemDao.countByTier(tier.name.lowercase())
+                    problemRepository.countByTier(tier)
                 }.getOrDefault(0)
                 val coveragePct = if (corpusInTier > 0) {
                     ((solvedInTier.toFloat() / corpusInTier.toFloat()) * 100f)

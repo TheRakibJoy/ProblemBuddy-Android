@@ -2,14 +2,14 @@ package com.rakibjoy.problembuddy.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rakibjoy.problembuddy.core.database.dao.CounterDao
-import com.rakibjoy.problembuddy.core.database.dao.HandleDao
-import com.rakibjoy.problembuddy.core.database.dao.InteractionDao
-import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
-import com.rakibjoy.problembuddy.core.database.dao.TrainingJobDao
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.core.work.DailyProblemScheduler
+import com.rakibjoy.problembuddy.domain.repository.CounterRepository
+import com.rakibjoy.problembuddy.domain.repository.HandleRepository
+import com.rakibjoy.problembuddy.domain.repository.InteractionRepository
+import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
 import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
+import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -28,11 +28,11 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsStore: SettingsStore,
-    private val problemDao: ProblemDao,
-    private val counterDao: CounterDao,
-    private val handleDao: HandleDao,
-    private val interactionDao: InteractionDao,
-    private val trainingJobDao: TrainingJobDao,
+    private val problemRepository: ProblemRepository,
+    private val counterRepository: CounterRepository,
+    private val handleRepository: HandleRepository,
+    private val interactionRepository: InteractionRepository,
+    private val trainingJobRepository: TrainingJobRepository,
     private val reviewRepository: ReviewRepository,
     private val dailyProblemScheduler: DailyProblemScheduler,
 ) : ViewModel() {
@@ -133,10 +133,10 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                problemDao.deleteAll()
-                counterDao.deleteAll()
-                handleDao.deleteAll()
-                trainingJobDao.deleteAll()
+                problemRepository.clear()
+                counterRepository.clear()
+                handleRepository.clear()
+                trainingJobRepository.clearAll()
                 reviewRepository.clearAll()
             }
             _state.update { it.copy(resetCorpusBusy = false) }
@@ -148,11 +148,11 @@ class SettingsViewModel @Inject constructor(
         _state.update { it.copy(showDeleteAllConfirm = false) }
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                problemDao.deleteAll()
-                counterDao.deleteAll()
-                handleDao.deleteAll()
-                interactionDao.deleteAll()
-                trainingJobDao.deleteAll()
+                problemRepository.clear()
+                counterRepository.clear()
+                handleRepository.clear()
+                interactionRepository.clear()
+                trainingJobRepository.clearAll()
                 reviewRepository.clearAll()
             }
             settingsStore.clearDailyProblem()

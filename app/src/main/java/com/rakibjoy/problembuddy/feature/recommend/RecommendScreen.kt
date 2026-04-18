@@ -37,7 +37,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilterAltOff
-import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -156,7 +156,7 @@ fun RecommendScreen(
                     actions = {
                         IconButton(onClick = { onIntent(RecommendIntent.OpenFilters) }) {
                             Icon(
-                                imageVector = Icons.Default.Sort,
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
                                 contentDescription = "Filters",
                                 tint = MaterialTheme.appExtras.textTertiary,
                             )
@@ -320,7 +320,7 @@ private fun LoadedList(
                 visible = visible,
                 enter = fadeIn() + slideInVertically { it / 4 },
                 exit = fadeOut(),
-                modifier = Modifier.animateItemPlacement(),
+                modifier = Modifier.animateItem(),
             ) {
                 val key = problemKey(problem)
                 val variant = when {

@@ -1,7 +1,7 @@
 package com.rakibjoy.problembuddy.domain.usecase
 
-import com.rakibjoy.problembuddy.core.database.dao.CounterDao
 import com.rakibjoy.problembuddy.domain.model.Tier
+import com.rakibjoy.problembuddy.domain.repository.CounterRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -19,7 +19,7 @@ import javax.inject.Inject
  *  4. Return the top [topN] tag names.
  */
 class ComputeWeakTagsUseCase @Inject constructor(
-    private val counterDao: CounterDao,
+    private val counterRepository: CounterRepository,
 ) {
     suspend operator fun invoke(
         tier: Tier,
@@ -27,7 +27,7 @@ class ComputeWeakTagsUseCase @Inject constructor(
         topN: Int = 10,
         minCorpusCount: Int = 5,
     ): List<String> = withContext(Dispatchers.IO) {
-        val counters = counterDao.getByTier(tier.name.lowercase())
+        val counters = counterRepository.getByTier(tier)
         if (counters.isEmpty()) return@withContext emptyList()
 
         val corpus: Map<String, Int> = counters.associate { it.tagName to it.count }

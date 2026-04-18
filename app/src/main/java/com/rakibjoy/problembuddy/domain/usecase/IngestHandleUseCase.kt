@@ -1,15 +1,14 @@
 package com.rakibjoy.problembuddy.domain.usecase
 
-import com.rakibjoy.problembuddy.core.database.dao.CounterDao
-import com.rakibjoy.problembuddy.core.database.dao.HandleDao
-import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
-import com.rakibjoy.problembuddy.core.database.entity.CounterEntity
-import com.rakibjoy.problembuddy.core.database.entity.HandleEntity
-import com.rakibjoy.problembuddy.core.database.entity.ProblemEntity
 import com.rakibjoy.problembuddy.domain.model.IngestProgress
+import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.Submission
+import com.rakibjoy.problembuddy.domain.model.TagCounter
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
+import com.rakibjoy.problembuddy.domain.repository.CounterRepository
+import com.rakibjoy.problembuddy.domain.repository.HandleRepository
+import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -18,9 +17,9 @@ import javax.inject.Inject
 
 class IngestHandleUseCase @Inject constructor(
     private val codeforces: CodeforcesRepository,
-    private val problemDao: ProblemDao,
-    private val counterDao: CounterDao,
-    private val handleDao: HandleDao,
+    private val problemRepository: ProblemRepository,
+    private val counterRepository: CounterRepository,
+    private val handleRepository: HandleRepository,
 ) {
     operator fun invoke(handles: List<String>): Flow<IngestProgress> = flow {
         if (handles.isEmpty()) return@flow
@@ -65,7 +64,7 @@ class IngestHandleUseCase @Inject constructor(
                 .toList()
 
             withContext(Dispatchers.IO) {
-                handleDao.insert(HandleEntity(handle = handle))
+                handleRepository.insert(handle)
             }
 
             val byTier: Map<Tier, List<Submission>> = deduped.groupBy { sub ->
@@ -84,15 +83,13 @@ class IngestHandleUseCase @Inject constructor(
                     ),
                 )
 
-                val tierKey = tier.name.lowercase()
-
-                val problems = group.map { sub ->
-                    ProblemEntity(
-                        tier = tierKey,
+                val problems: List<Problem> = group.map { sub ->
+                    Problem(
                         contestId = sub.problem.contestId,
                         problemIndex = sub.problem.problemIndex,
+                        name = sub.problem.name,
                         rating = sub.problem.rating,
-                        tags = sub.problem.tags.joinToString(","),
+                        tags = sub.problem.tags,
                     )
                 }
 
@@ -107,24 +104,24 @@ class IngestHandleUseCase @Inject constructor(
                 }
 
                 withContext(Dispatchers.IO) {
-                    problemDao.insertAll(problems)
+                    problemRepository.insertAll(problems)
 
                     if (increments.isNotEmpty()) {
-                        val current = counterDao.getByTier(tierKey)
+                        val current = counterRepository.getByTier(tier)
                         val byTag = current.associateBy { it.tagName }
                         val merged = increments.map { (tag, delta) ->
                             val existing = byTag[tag]
                             if (existing != null) {
                                 existing.copy(count = existing.count + delta)
                             } else {
-                                CounterEntity(
+                                TagCounter(
                                     tagName = tag,
-                                    tier = tierKey,
+                                    tier = tier,
                                     count = delta,
                                 )
                             }
                         }
-                        counterDao.upsertAll(merged)
+                        counterRepository.upsertAll(merged)
                     }
                 }
 

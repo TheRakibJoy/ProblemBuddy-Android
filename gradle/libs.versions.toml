@@ -31,10 +31,6 @@ androidxEspresso = "3.6.1"
 
 coil = "2.7.0"
 
-firebaseBom = "33.7.0"
-googleServicesPlugin = "4.4.2"
-crashlyticsPlugin = "3.0.2"
-
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
@@ -94,10 +90,6 @@ androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espres
 
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
-firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-analytics-ktx = { group = "com.google.firebase", name = "firebase-analytics-ktx" }
-firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx" }
-
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
@@ -106,5 +98,3 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 android-junit5 = { id = "de.mannodermaus.android-junit5", version.ref = "androidJunit5Plugin" }
-google-services = { id = "com.google.gms.google-services", version.ref = "googleServicesPlugin" }
-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsPlugin" }

@@ -14,10 +14,11 @@ permissions:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -36,14 +37,27 @@ jobs:
 
       - name: Stage APK + metadata
         run: |
-          set -euo pipefail
+          set -eu
           SHORT_SHA="$(git rev-parse --short HEAD)"
           BUILD_DATE="$(date -u +%Y-%m-%d)"
+          # Default to "1.0" if the versionName grep turns up empty so we
+          # never let pipefail kill the job over a minor metadata miss.
           VERSION_NAME="$(grep -E '^\s*versionName' app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [ -z "${VERSION_NAME}" ]; then
+            VERSION_NAME="1.0"
+          fi
+          echo "Publishing version ${VERSION_NAME} @ ${SHORT_SHA}"
+
+          APK_SRC="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "${APK_SRC}" ]; then
+            echo "Expected APK missing at ${APK_SRC}" >&2
+            ls -R app/build/outputs/apk || true
+            exit 1
+          fi
 
           mkdir -p /tmp/publish
-          cp app/build/outputs/apk/release/app-release.apk "/tmp/publish/ProblemBuddy-${VERSION_NAME}-${SHORT_SHA}.apk"
-          cp app/build/outputs/apk/release/app-release.apk "/tmp/publish/ProblemBuddy-latest.apk"
+          cp "${APK_SRC}" "/tmp/publish/ProblemBuddy-${VERSION_NAME}-${SHORT_SHA}.apk"
+          cp "${APK_SRC}" "/tmp/publish/ProblemBuddy-latest.apk"
 
           cat > /tmp/publish/README.md <<EOF
           # ProblemBuddy — Direct APK downloads
@@ -56,26 +70,30 @@ jobs:
           ## Install
 
           1. Download the APK on your Android device.
-          2. Allow "Install unknown apps" for your browser/file-manager (one-time Android prompt).
+          2. Allow "Install unknown apps" for your browser/file-manager.
           3. Open the APK → Install.
 
-          APKs are signed with a debug key, so Android will warn you about the source. That's expected for direct side-loading.
+          APKs are signed with a debug key, so Android will warn you about the source. That's expected for side-loading.
 
           Rebuilt automatically by \`.github/workflows/publish-apk.yml\` on every push to \`main\`.
           EOF
 
       - name: Push to downloads branch
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eu
+          # Build a completely clean orphan tree in a scratch worktree so we
+          # can't accidentally capture build intermediates.
+          SCRATCH="$(mktemp -d)"
+          cp -r /tmp/publish/. "${SCRATCH}/"
+          cd "${SCRATCH}"
+          git init -q -b downloads
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
-          # Create an orphan branch so history stays small (no APK bloat on main).
-          git checkout --orphan downloads
-          git rm -rf . >/dev/null 2>&1 || true
-          cp /tmp/publish/* .
-          git add -A
-          git commit -m "Publish APK ${GITHUB_SHA::7}"
+          # Explicit, narrow add — never `-A` here.
+          git add ProblemBuddy-*.apk README.md
+          git commit -q -m "Publish APK ${GITHUB_SHA::7}"
           git push --force origin downloads

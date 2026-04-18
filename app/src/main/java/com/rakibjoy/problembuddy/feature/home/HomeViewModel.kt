@@ -2,10 +2,10 @@ package com.rakibjoy.problembuddy.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
+import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
 import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
 import com.rakibjoy.problembuddy.domain.usecase.GetTodayProblemUseCase
@@ -43,7 +43,7 @@ class HomeViewModel @Inject constructor(
     private val settingsStore: SettingsStore,
     private val codeforces: CodeforcesRepository,
     private val trainingJobRepository: TrainingJobRepository,
-    private val problemDao: ProblemDao,
+    private val problemRepository: ProblemRepository,
     private val reviewRepository: ReviewRepository,
     private val getTodayProblem: GetTodayProblemUseCase,
 ) : ViewModel() {
@@ -146,7 +146,8 @@ class HomeViewModel @Inject constructor(
 
     private fun fetchUserInfo(handle: String) {
         viewModelScope.launch {
-            codeforces.userInfo(handle).onSuccess { info ->
+            codeforces.userInfoWithFallback(handle).onSuccess { fresh ->
+                val info = fresh.value
                 val userRating = info.rating ?: info.maxRating ?: 0
                 val currentTier = Tier.forMaxRating(userRating)
                 val nextTier = Tier.entries.firstOrNull { it.floor > currentTier.floor }
@@ -203,7 +204,8 @@ class HomeViewModel @Inject constructor(
 
     private fun fetchSolvedCount(handle: String) {
         viewModelScope.launch {
-            codeforces.userStatus(handle, from = 1, count = 100_000).onSuccess { subs ->
+            codeforces.userStatusWithFallback(handle, 1, 100_000).onSuccess { fresh ->
+                val subs = fresh.value
                 val acceptedSubs = subs.asSequence().filter { it.verdict == "OK" }.toList()
                 val solvedKeys = acceptedSubs.asSequence()
                     .mapNotNull { sub ->
@@ -273,7 +275,7 @@ class HomeViewModel @Inject constructor(
     private fun refreshCorpus() {
         viewModelScope.launch {
             val total = runCatching {
-                Tier.entries.sumOf { problemDao.countByTier(it.name.lowercase()) }
+                Tier.entries.sumOf { problemRepository.countByTier(it) }
             }.getOrDefault(0)
             val hasCorpus = total > 0
             _state.update { it.copy(hasCorpus = hasCorpus) }
