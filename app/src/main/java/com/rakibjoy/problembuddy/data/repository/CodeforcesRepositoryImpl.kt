@@ -9,10 +9,12 @@ import com.rakibjoy.problembuddy.data.cache.UserInfoPersisted
 import com.rakibjoy.problembuddy.data.cache.toDomain
 import com.rakibjoy.problembuddy.data.cache.toPersisted
 import com.rakibjoy.problembuddy.data.mapper.toDomain
+import com.rakibjoy.problembuddy.data.mapper.toUpcoming
 import com.rakibjoy.problembuddy.domain.model.CodeforcesException
 import com.rakibjoy.problembuddy.domain.model.Fresh
 import com.rakibjoy.problembuddy.domain.model.RatingChange
 import com.rakibjoy.problembuddy.domain.model.Submission
+import com.rakibjoy.problembuddy.domain.model.UpcomingContest
 import com.rakibjoy.problembuddy.domain.model.UserInfo
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,11 @@ class CodeforcesRepositoryImpl @Inject constructor(
     override suspend fun userRating(handle: String): Result<List<RatingChange>> =
         fetch("userRating:$handle") {
             api.userRating(handle).resolveOk().map { it.toDomain() }
+        }
+
+    override suspend fun upcomingContests(): Result<List<UpcomingContest>> =
+        fetch("upcomingContests", ttlMs = 15 * 60 * 1000L) {
+            api.contestList(gym = false).resolveOk().mapNotNull { it.toUpcoming() }
         }
 
     override suspend fun userStatus(

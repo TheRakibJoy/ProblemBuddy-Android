@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 /**
@@ -68,6 +71,12 @@ class HomeViewModel @Inject constructor(
                             maxRating = if (handle == null) null else it.maxRating,
                             ratingDelta = if (handle == null) null else it.ratingDelta,
                             problemsSolved = if (handle == null) null else it.problemsSolved,
+                            streakDays = if (handle == null) 0 else it.streakDays,
+                            todayHasAc = if (handle == null) false else it.todayHasAc,
+                            upcomingContest = if (handle == null) null else it.upcomingContest,
+                            nextTier = if (handle == null) null else it.nextTier,
+                            ratingToNextTier = if (handle == null) null else it.ratingToNextTier,
+                            nextTierProgress = if (handle == null) 0f else it.nextTierProgress,
                         )
                     }
                     refreshCorpus()
@@ -76,6 +85,7 @@ class HomeViewModel @Inject constructor(
                         fetchUserInfo(handle)
                         fetchRatingDelta(handle)
                         fetchSolvedCount(handle)
+                        fetchUpcomingContests()
                     } else if (handle == null) {
                         lastHandleFetched = null
                     }
@@ -107,15 +117,44 @@ class HomeViewModel @Inject constructor(
     private fun fetchUserInfo(handle: String) {
         viewModelScope.launch {
             codeforces.userInfo(handle).onSuccess { info ->
+                val userRating = info.rating ?: info.maxRating ?: 0
+                val currentTier = Tier.forMaxRating(userRating)
+                val nextTier = Tier.entries.firstOrNull { it.floor > currentTier.floor }
+                val ratingToNext: Int?
+                val progress: Float
+                if (nextTier != null) {
+                    ratingToNext = (nextTier.floor - userRating).coerceAtLeast(0)
+                    val span = (nextTier.floor - currentTier.floor).toFloat()
+                    progress = if (span <= 0f) 1f
+                    else ((userRating - currentTier.floor).toFloat() / span).coerceIn(0f, 1f)
+                } else {
+                    ratingToNext = null
+                    progress = 1f
+                }
                 _state.update {
                     if (it.handle == handle) {
                         it.copy(
                             rating = info.rating,
                             maxRating = info.maxRating,
                             avatarUrl = info.titlePhotoUrl ?: info.avatarUrl,
+                            nextTier = nextTier,
+                            ratingToNextTier = ratingToNext,
+                            nextTierProgress = progress,
                         )
                     } else it
                 }
+            }
+        }
+    }
+
+    private fun fetchUpcomingContests() {
+        viewModelScope.launch {
+            codeforces.upcomingContests().onSuccess { list ->
+                val nowSeconds = System.currentTimeMillis() / 1000L
+                val next = list.asSequence()
+                    .filter { it.startTimeSeconds >= nowSeconds }
+                    .minByOrNull { it.startTimeSeconds }
+                _state.update { it.copy(upcomingContest = next) }
             }
         }
     }
@@ -152,14 +191,53 @@ class HomeViewModel @Inject constructor(
                         else p.contestId to p.problemIndex
                     }
                     .toSet()
+
+                val zone = ZoneId.systemDefault()
+                val today = LocalDate.now(zone)
+                val startOfTodaySec = today.atStartOfDay(zone).toEpochSecond()
+                val todayHasAc = acceptedSubs.any { it.creationTimeSeconds >= startOfTodaySec }
+                val acByDay: Map<Long, Int> = acceptedSubs.asSequence()
+                    .filter { it.problem.contestId != 0 && it.problem.problemIndex.isNotBlank() }
+                    .distinctBy {
+                        Triple(
+                            it.problem.contestId,
+                            it.problem.problemIndex,
+                            Instant.ofEpochSecond(it.creationTimeSeconds)
+                                .atZone(zone).toLocalDate().toEpochDay(),
+                        )
+                    }
+                    .groupingBy {
+                        Instant.ofEpochSecond(it.creationTimeSeconds)
+                            .atZone(zone).toLocalDate().toEpochDay()
+                    }
+                    .eachCount()
+                val streakDays = computeCurrentStreak(acByDay, today.toEpochDay())
+
                 _state.update {
                     if (it.handle == handle) it.copy(
                         problemsSolved = solvedKeys.size,
                         weeklySolved = weeklyKeys.size,
+                        todayHasAc = todayHasAc,
+                        streakDays = streakDays,
                     ) else it
                 }
             }
         }
+    }
+
+    private fun computeCurrentStreak(byDay: Map<Long, Int>, todayEpoch: Long): Int {
+        if (byDay.isEmpty()) return 0
+        var cursor = if (byDay[todayEpoch] == null && byDay[todayEpoch - 1] != null) {
+            todayEpoch - 1
+        } else {
+            todayEpoch
+        }
+        var streak = 0
+        while ((byDay[cursor] ?: 0) > 0) {
+            streak++
+            cursor -= 1
+        }
+        return streak
     }
 
     private fun refreshCorpus() {

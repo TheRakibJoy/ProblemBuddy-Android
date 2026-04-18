@@ -1,5 +1,7 @@
 package com.rakibjoy.problembuddy.feature.home
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -55,10 +57,13 @@ import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
 import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import com.rakibjoy.problembuddy.core.ui.components.HandleText
+import com.rakibjoy.problembuddy.core.ui.components.NextTierProgress
 import com.rakibjoy.problembuddy.core.ui.components.RatingRail
 import com.rakibjoy.problembuddy.core.ui.components.SparklineCard
 import com.rakibjoy.problembuddy.core.ui.components.StatCard
+import com.rakibjoy.problembuddy.core.ui.components.StreakRiskBanner
 import com.rakibjoy.problembuddy.core.ui.components.TagChip
+import com.rakibjoy.problembuddy.core.ui.components.UpcomingContestCard
 import com.rakibjoy.problembuddy.core.ui.components.UpsolveBadge
 import com.rakibjoy.problembuddy.core.ui.components.UpsolveCard
 import com.rakibjoy.problembuddy.core.ui.theme.ProblemBuddyTheme
@@ -120,6 +125,7 @@ fun HomeScreen(
                 )
             },
         ) { padding ->
+            val context = LocalContext.current
             LazyColumn(
                 modifier = Modifier
                     .padding(padding)
@@ -127,12 +133,50 @@ fun HomeScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                state.upcomingContest?.let { contest ->
+                    val nowSeconds = System.currentTimeMillis() / 1000L
+                    if (contest.startTimeSeconds - nowSeconds > 0L) {
+                        item(key = "upcoming-contest") {
+                            UpcomingContestCard(
+                                contest = contest,
+                                onRegister = {
+                                    val uri = Uri.parse(
+                                        "https://codeforces.com/contestRegistration/${contest.id}",
+                                    )
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, uri).apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            },
+                                        )
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+
                 item(key = "handle") {
                     HandleRow(
                         handle = state.handle,
                         tier = Tier.forMaxRating(state.rating ?: 0),
                         avatarUrl = state.avatarUrl,
                     )
+                }
+
+                if (state.streakDays > 0 && !state.todayHasAc) {
+                    item(key = "streak-risk") {
+                        val now = java.time.LocalDateTime.now()
+                        val midnight = now.toLocalDate().plusDays(1).atStartOfDay()
+                        val totalMinutes = java.time.Duration.between(now, midnight).toMinutes()
+                        val hours = (totalMinutes / 60L).toInt().coerceAtLeast(0)
+                        val minutes = (totalMinutes % 60L).toInt().coerceAtLeast(0)
+                        StreakRiskBanner(
+                            streakDays = state.streakDays,
+                            hoursUntilMidnight = hours,
+                            minutesUntilMidnight = minutes,
+                        )
+                    }
                 }
 
                 item(key = "stats") {
@@ -142,6 +186,17 @@ fun HomeScreen(
                         solved = state.problemsSolved,
                         streak = state.streakDays,
                     )
+                }
+
+                if (state.rating != null) {
+                    item(key = "next-tier") {
+                        NextTierProgress(
+                            currentTier = Tier.forMaxRating(state.rating),
+                            nextTier = state.nextTier,
+                            ratingToGo = state.ratingToNextTier,
+                            progress = state.nextTierProgress,
+                        )
+                    }
                 }
 
                 item(key = "weekly-goal") {

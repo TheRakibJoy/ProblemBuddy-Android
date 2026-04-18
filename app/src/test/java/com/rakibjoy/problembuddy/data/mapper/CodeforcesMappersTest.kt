@@ -1,10 +1,12 @@
 package com.rakibjoy.problembuddy.data.mapper
 
+import com.rakibjoy.problembuddy.core.network.dto.ContestDto
 import com.rakibjoy.problembuddy.core.network.dto.ProblemDto
 import com.rakibjoy.problembuddy.core.network.dto.RatingChangeDto
 import com.rakibjoy.problembuddy.core.network.dto.SubmissionDto
 import com.rakibjoy.problembuddy.core.network.dto.UserInfoDto
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
@@ -144,5 +146,33 @@ class CodeforcesMappersTest {
         assertEquals(1_600_000_000L, domain.ratingUpdateTimeSeconds)
         assertEquals(3500, domain.oldRating)
         assertEquals(3600, domain.newRating)
+    }
+
+    @Test
+    fun `ContestDto phase BEFORE maps to UpcomingContest with parsed division`() {
+        val dto = ContestDto(
+            id = 1234,
+            name = "Codeforces Round 999 (Div. 2)",
+            phase = "BEFORE",
+            durationSeconds = 7200L,
+            startTimeSeconds = 1_700_000_000L,
+        )
+        val upcoming = dto.toUpcoming()
+        assertNotNull(upcoming)
+        assertEquals(1234, upcoming!!.id)
+        assertEquals(1_700_000_000L, upcoming.startTimeSeconds)
+        assertEquals("Div 2", upcoming.division)
+    }
+
+    @Test
+    fun `ContestDto phase FINISHED returns null`() {
+        val dto = ContestDto(
+            id = 999,
+            name = "Codeforces Round 1 (Div. 1)",
+            phase = "FINISHED",
+            durationSeconds = 7200L,
+            startTimeSeconds = 1_500_000_000L,
+        )
+        assertNull(dto.toUpcoming())
     }
 }

@@ -4,6 +4,7 @@ import com.rakibjoy.problembuddy.core.ui.components.UpsolveBadge
 import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.model.TrainingJob
+import com.rakibjoy.problembuddy.domain.model.UpcomingContest
 
 data class HomeState(
     val handle: String? = null,
@@ -16,7 +17,12 @@ data class HomeState(
     // Redesign additions
     val ratingDelta: Int? = null,
     val problemsSolved: Int? = null,
-    val streakDays: Int? = null,
+    val streakDays: Int = 0,
+    val todayHasAc: Boolean = false,
+    val upcomingContest: UpcomingContest? = null,
+    val nextTier: Tier? = null,
+    val ratingToNextTier: Int? = null,
+    val nextTierProgress: Float = 0f,
     val weeklyGoal: Int = 10,
     val weeklySolved: Int = 0,
     // count of AC'd problems in last 7 days
