@@ -38,10 +38,6 @@ Core flows (match the web app):
 6. **Settings**: appearance, recommendations, goals, notifications (daily
    problem reminder with hour + minute picker), data ops, about.
 
-**Spaced-repetition review queue**: when a user marks a problem solved, it
-enters a Leitner review schedule (boxes 0–5 with intervals 1/3/7/14/30/90
-days). Problems whose `nextReviewAt` is due surface on Home.
-
 **Daily problem**: one problem per (date, handle), cached via DataStore,
 shown on Home and optionally fired as a notification via `WorkManager` at a
 user-chosen local time.
@@ -488,9 +484,6 @@ up. Previews use a hand-constructed state for instant rendering.
 - **Daily notification worker** (`DailyProblemWorker` + `DailyProblemScheduler`):
   PeriodicWorkRequest, user-chosen hour + minute (TimePicker), channel
   `daily_problem`, POST_NOTIFICATIONS permission handshake on Android 13+.
-- **Spaced-repetition review queue** (`ReviewEntity` + `ReviewRepository`):
-  Leitner boxes 0–5 with intervals 1/3/7/14/30/90 days, scheduled on
-  MarkSolved, surfaced on Home.
 - **Activity analytics** (`ProfileViewModel.buildActivityStats`): heatmap,
   streak/longest/this-year, rating timeline, recent contests, division deltas,
   tier stacked area, tag radar (8 canonical tags), first-attempt AC rate,
@@ -541,7 +534,6 @@ When in doubt about an algorithm or UX, consult the web implementation:
 
 Features that don't have a web equivalent (Android-original):
 
-- Spaced-repetition review queue (`ReviewRepository`, Leitner boxes)
 - Daily problem notification (`DailyProblemWorker`)
 - Incremental `user.status` sync with per-handle checkpoint
 - Activity analytics suite (`ActivityStats` + 15+ derived views)

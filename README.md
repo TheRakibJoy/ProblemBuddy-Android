@@ -36,7 +36,7 @@ The APK is signed with a debug key, so Android shows an "unknown source" warning
 - **Home** — dashboard: upcoming contest countdown (registers via
   `contest.list`), streak-at-risk banner, rating / solved / streak stats,
   progress-to-next-tier pill, weekly goal progress, **problem of the day** card,
-  today's picks, upsolve queue placeholder, "due for review" list, rotating tip.
+  today's picks, upsolve queue placeholder, rotating tip.
 - **Recommend** — ranked problem list with left-rail rating, tier accent bar,
   tag chips. Swipe right to open, swipe left to skip; buttons for Solve / Mark
   Solved / Skip. Filter sheet with chip-based include/exclude tag selection,
@@ -72,9 +72,6 @@ The APK is signed with a debug key, so Android shows an "unknown source" warning
 - **Daily notification** — opt-in `PeriodicWorkRequest` that fires at a user-
   chosen hour + minute via a `TimePicker`. Posts a notification with one
   recommended problem; tap opens it in the browser.
-- **Spaced-repetition review queue** — when you mark a problem solved, it's
-  scheduled for re-review using Leitner boxes (intervals 1 / 3 / 7 / 14 / 30 /
-  90 days). Due problems surface on Home.
 - **Incremental submission sync** — `user.status` is pulled in 100-item pages
   using a per-handle checkpoint, so active users don't re-download 10k+
   submissions on every refresh.

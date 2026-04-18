@@ -5,14 +5,12 @@ import com.rakibjoy.problembuddy.data.repository.CounterRepositoryImpl
 import com.rakibjoy.problembuddy.data.repository.HandleRepositoryImpl
 import com.rakibjoy.problembuddy.data.repository.InteractionRepositoryImpl
 import com.rakibjoy.problembuddy.data.repository.ProblemRepositoryImpl
-import com.rakibjoy.problembuddy.data.repository.ReviewRepositoryImpl
 import com.rakibjoy.problembuddy.data.repository.TrainingJobRepositoryImpl
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import com.rakibjoy.problembuddy.domain.repository.CounterRepository
 import com.rakibjoy.problembuddy.domain.repository.HandleRepository
 import com.rakibjoy.problembuddy.domain.repository.InteractionRepository
 import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
-import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.repository.TrainingJobRepository
 import dagger.Binds
 import dagger.Module
@@ -35,12 +33,6 @@ abstract class RepositoryModule {
     abstract fun bindTrainingJobRepository(
         impl: TrainingJobRepositoryImpl,
     ): TrainingJobRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindReviewRepository(
-        impl: ReviewRepositoryImpl,
-    ): ReviewRepository
 
     @Binds
     @Singleton
