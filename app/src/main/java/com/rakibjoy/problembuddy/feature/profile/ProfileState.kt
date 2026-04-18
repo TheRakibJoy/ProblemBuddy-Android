@@ -17,6 +17,9 @@ data class ProfileState(
     val coveragePct: Int? = null,
     val activity: ActivityStats? = null,
     val compareHandle: String? = null,
+    val compareRating: Int? = null,
+    val compareTier: Tier? = null,
+    val compareError: String? = null,
 )
 
 data class WeakTagStat(val tag: String, val coverage: Float)

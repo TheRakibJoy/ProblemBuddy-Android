@@ -15,11 +15,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -44,29 +46,94 @@ class ProfileViewModel @Inject constructor(
     private val _effects = Channel<ProfileEffect>(Channel.BUFFERED)
     val effects: Flow<ProfileEffect> = _effects.receiveAsFlow()
 
+    private var compareFetchJob: Job? = null
+
     init {
         onIntent(ProfileIntent.Refresh)
         settingsStore.compareHandle
-            .onEach { handle ->
-                _state.update { it.copy(compareHandle = handle?.takeIf { s -> s.isNotBlank() }) }
+            .distinctUntilChanged()
+            .onEach { rawHandle ->
+                val handle = rawHandle?.takeIf { it.isNotBlank() }
+                _state.update {
+                    it.copy(
+                        compareHandle = handle,
+                        compareRating = if (handle == null) null else it.compareRating,
+                        compareTier = if (handle == null) null else it.compareTier,
+                        compareError = if (handle == null) null else it.compareError,
+                    )
+                }
+                fetchCompareProfile(handle)
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun fetchCompareProfile(handle: String?) {
+        compareFetchJob?.cancel()
+        if (handle == null) return
+        compareFetchJob = viewModelScope.launch {
+            codeforces.userInfo(handle)
+                .onSuccess { info ->
+                    val tier = Tier.forMaxRating(info.maxRating ?: info.rating ?: 0)
+                    _state.update {
+                        if (it.compareHandle == handle) {
+                            it.copy(
+                                compareRating = info.rating,
+                                compareTier = tier,
+                                compareError = null,
+                            )
+                        } else it
+                    }
+                }
+                .onFailure { err ->
+                    _state.update {
+                        if (it.compareHandle == handle) {
+                            it.copy(
+                                compareRating = null,
+                                compareTier = null,
+                                compareError = err.message ?: "Failed to load",
+                            )
+                        } else it
+                    }
+                }
+        }
     }
 
     fun onIntent(intent: ProfileIntent) {
         when (intent) {
             ProfileIntent.Refresh -> refresh()
+            is ProfileIntent.SetCompareHandle -> {
+                viewModelScope.launch {
+                    val trimmed = intent.handle.trim()
+                    settingsStore.setCompareHandle(trimmed.ifBlank { null })
+                }
+            }
         }
     }
 
     private fun refresh() {
         viewModelScope.launch {
             val existingCompare = _state.value.compareHandle
-            _state.value = ProfileState(loading = true, compareHandle = existingCompare)
+            val existingCompareRating = _state.value.compareRating
+            val existingCompareTier = _state.value.compareTier
+            val existingCompareError = _state.value.compareError
+            _state.value = ProfileState(
+                loading = true,
+                compareHandle = existingCompare,
+                compareRating = existingCompareRating,
+                compareTier = existingCompareTier,
+                compareError = existingCompareError,
+            )
             try {
                 val handle = settingsStore.cfHandle.first()
                 if (handle.isNullOrBlank()) {
-                    _state.value = ProfileState(loading = false, error = "No handle", compareHandle = existingCompare)
+                    _state.value = ProfileState(
+                        loading = false,
+                        error = "No handle",
+                        compareHandle = existingCompare,
+                        compareRating = existingCompareRating,
+                        compareTier = existingCompareTier,
+                        compareError = existingCompareError,
+                    )
                     return@launch
                 }
 
@@ -77,6 +144,9 @@ class ProfileViewModel @Inject constructor(
                         handle = handle,
                         error = e.message ?: "Failed to load profile",
                         compareHandle = existingCompare,
+                        compareRating = existingCompareRating,
+                        compareTier = existingCompareTier,
+                        compareError = existingCompareError,
                     )
                     return@launch
                 }
@@ -143,6 +213,9 @@ class ProfileViewModel @Inject constructor(
                     fetchedAtMillis = fetchedAt,
                     activity = activity,
                     compareHandle = existingCompare,
+                    compareRating = existingCompareRating,
+                    compareTier = existingCompareTier,
+                    compareError = existingCompareError,
                 )
             } catch (t: Throwable) {
                 _state.value = _state.value.copy(

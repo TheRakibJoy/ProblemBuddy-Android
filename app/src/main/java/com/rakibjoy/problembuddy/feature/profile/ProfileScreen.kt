@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -110,6 +111,7 @@ fun ProfileScreen(
                     )
                     else -> ProfileContent(
                         state = state,
+                        onIntent = onIntent,
                         onNavigateToTrain = onNavigateToTrain,
                     )
                 }
@@ -160,10 +162,11 @@ private fun ErrorContent(
 @Composable
 private fun ProfileContent(
     state: ProfileState,
+    onIntent: (ProfileIntent) -> Unit,
     onNavigateToTrain: (() -> Unit)? = null,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = remember { listOf("tier ladder", "weak tags", "activity") }
+    val tabs = remember { listOf("tier ladder", "weak tags", "activity", "compare") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ProfileHero(
@@ -202,6 +205,7 @@ private fun ProfileContent(
                 0 -> tierLadderTab(state)
                 1 -> weakTagsTab(state, onNavigateToTrain)
                 2 -> activityTab(state)
+                3 -> compareTab(state, onSetCompareHandle = { onIntent(ProfileIntent.SetCompareHandle(it)) })
             }
         }
     }
@@ -581,10 +585,22 @@ private fun LazyListScope.activityTab(state: ProfileState) {
         }
     }
 
-    // 17. Compare
+    // Compare has moved to its own tab — no compare item in the activity tab.
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.compareTab(
+    state: ProfileState,
+    onSetCompareHandle: (String) -> Unit,
+) {
+    item(key = "compare-input") {
+        CompareInput(
+            initial = state.compareHandle.orEmpty(),
+            onCommit = onSetCompareHandle,
+        )
+    }
     val compareHandle = state.compareHandle
     if (!compareHandle.isNullOrBlank() && !state.handle.isNullOrBlank()) {
-        item(key = "activity-compare") {
+        item(key = "compare-card") {
             val context = LocalContext.current
             Column {
                 ComparisonCard(
@@ -592,14 +608,22 @@ private fun LazyListScope.activityTab(state: ProfileState) {
                     myRating = state.rating,
                     myTier = state.currentTier,
                     theirHandle = compareHandle,
-                    theirRating = null,
-                    theirTier = null,
+                    theirRating = state.compareRating,
+                    theirTier = state.compareTier,
                 )
-                Spacer(Modifier.height(Spacing.xs))
+                Spacer(Modifier.height(Spacing.sm))
+                val subtitle = when {
+                    state.compareError != null -> state.compareError
+                    state.compareRating == null && state.compareTier == null -> "loading $compareHandle…"
+                    else -> "open $compareHandle on codeforces →"
+                }
                 Text(
-                    text = "rating from codeforces.com/profile/$compareHandle",
+                    text = subtitle,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.appExtras.accentVioletSoft,
+                    color = if (state.compareError != null)
+                        MaterialTheme.appExtras.deltaNegative
+                    else
+                        MaterialTheme.appExtras.accentVioletSoft,
                     modifier = Modifier.clickable {
                         runCatching {
                             context.startActivity(
@@ -613,7 +637,61 @@ private fun LazyListScope.activityTab(state: ProfileState) {
                 )
             }
         }
+    } else if (compareHandle.isNullOrBlank()) {
+        item(key = "compare-empty") {
+            Text(
+                text = "enter a codeforces handle above to compare ratings, tiers, and activity side-by-side.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.appExtras.textTertiary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = Spacing.md),
+                textAlign = TextAlign.Center,
+            )
+        }
     }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun CompareInput(
+    initial: String,
+    onCommit: (String) -> Unit,
+) {
+    // Local state so typing stays responsive without waiting for DataStore
+    // round-trips. Debounce writes so each keystroke doesn't trigger a fetch.
+    var local by androidx.compose.runtime.saveable.rememberSaveable(initial.ifBlank { "\u0000" }) {
+        androidx.compose.runtime.mutableStateOf(initial)
+    }
+    // If the source-of-truth changes externally (e.g. "delete all data"), sync local.
+    androidx.compose.runtime.LaunchedEffect(initial) {
+        if (initial != local) local = initial
+    }
+    // Debounce the commit.
+    androidx.compose.runtime.LaunchedEffect(local) {
+        kotlinx.coroutines.delay(350L)
+        if (local != initial) onCommit(local)
+    }
+    androidx.compose.material3.OutlinedTextField(
+        value = local,
+        onValueChange = { local = it.filter { c -> !c.isWhitespace() } },
+        placeholder = { Text("codeforces handle") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        trailingIcon = {
+            if (local.isNotEmpty()) {
+                androidx.compose.material3.IconButton(onClick = {
+                    local = ""
+                    onCommit("")
+                }) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "clear",
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable

@@ -124,10 +124,6 @@ fun SettingsScreen(
                     weeklyGoal = state.weeklyGoal,
                     onIntent = onIntent,
                 )
-                CompareGroup(
-                    compareHandle = state.compareHandle,
-                    onIntent = onIntent,
-                )
                 DataGroup(
                     resetCorpusBusy = state.resetCorpusBusy,
                     onIntent = onIntent,
@@ -447,38 +443,6 @@ private fun GoalsGroup(
     }
 }
 
-@Composable
-private fun CompareGroup(
-    compareHandle: String,
-    onIntent: (SettingsIntent) -> Unit,
-) {
-    SettingsGroup(title = "COMPARE") {
-        SettingsRow(
-            icon = Icons.Outlined.People,
-            title = "compare with",
-            subtitle = "see your profile next to another codeforces handle.",
-            belowContent = {
-                OutlinedTextField(
-                    value = compareHandle,
-                    onValueChange = { onIntent(SettingsIntent.SetCompareHandle(it)) },
-                    placeholder = { Text("handle") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        if (compareHandle.isNotEmpty()) {
-                            IconButton(onClick = { onIntent(SettingsIntent.SetCompareHandle("")) }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = "clear",
-                                )
-                            }
-                        }
-                    },
-                )
-            },
-        )
-    }
-}
 
 @Composable
 private fun AboutGroup() {
