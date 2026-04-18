@@ -36,10 +36,12 @@ The APK is signed with a debug key, so Android shows an "unknown source" warning
   tag chips. Swipe right to open, swipe left to skip; buttons for Solve / Mark
   Solved / Skip. Filter sheet with chip-based include/exclude tag selection,
   rating range, weak-only toggle, count. Staleness banner when data is cached.
-- **Train** — **corpus overview** (total problems, distinct tags, handle count,
-  by-difficulty histogram), curated handle input with live validation, progress
-  card for the active ingest, list of previously-trained handles with re-sync
-  and remove actions.
+- **Train** — framed as *"learn from who you look up to"*: enter a handle you're
+  inspired by and the app pulls their accepted problems into your local library,
+  tuning recommendations toward that level. Shows a **corpus overview** (total
+  problems, distinct tags, handle count, by-difficulty histogram), a live-
+  validated handle input, progress card for the active ingest, and a list of
+  previously-trained handles with re-sync / remove actions.
 - **Profile** — hero with handle + tier badge + 3-stat row. Four tabs:
   1. **Tier ladder** — full vertical CF ladder, tier you're at is highlighted.
   2. **Weak tags** — coverage bars driven by `ComputeWeakTagsUseCase`.

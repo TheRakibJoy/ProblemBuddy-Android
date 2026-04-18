@@ -194,12 +194,12 @@ private fun IntroBlock() {
             color = extras.textTertiary,
         )
         Text(
-            text = "build your corpus",
+            text = "learn from who you look up to",
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
-            text = "ingest strong handles' submissions to power recommendations.",
+            text = "enter a handle you're inspired by — we'll pull their solved problems into your library and tune recommendations to that level.",
             style = MaterialTheme.typography.bodyMedium,
             color = extras.textSecondary,
         )
@@ -217,7 +217,7 @@ private fun HandleField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text("codeforces handle") },
+        label = { Text("a handle you're inspired by") },
         singleLine = true,
         isError = validation is HandleValidation.Invalid,
         leadingIcon = {
