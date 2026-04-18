@@ -39,8 +39,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
+import com.rakibjoy.problembuddy.core.ui.components.ActivityHeatmap
 import com.rakibjoy.problembuddy.core.ui.components.AppTopBar
 import com.rakibjoy.problembuddy.core.ui.components.GradientSurface
+import com.rakibjoy.problembuddy.core.ui.components.Sparkline
+import com.rakibjoy.problembuddy.core.ui.theme.AppShapes
 import com.rakibjoy.problembuddy.core.ui.components.HandleAvatar
 import com.rakibjoy.problembuddy.core.ui.components.HandleText
 import com.rakibjoy.problembuddy.core.ui.components.SkeletonCard
@@ -178,7 +181,7 @@ private fun ProfileContent(
             when (selectedTab) {
                 0 -> tierLadderTab(state)
                 1 -> weakTagsTab(state, onNavigateToTrain)
-                2 -> activityTab()
+                2 -> activityTab(state)
             }
         }
     }
@@ -218,28 +221,147 @@ private fun androidx.compose.foundation.lazy.LazyListScope.weakTagsTab(
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.activityTab() {
-    item(key = "activity-placeholder") {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+private fun androidx.compose.foundation.lazy.LazyListScope.activityTab(state: ProfileState) {
+    val activity = state.activity ?: ActivityStats.Empty
+
+    item(key = "activity-heatmap") {
+        OutlinedSurfaceCard {
+            Column {
+                Text(
+                    text = "SUBMISSIONS",
+                    style = MaterialTheme.typography.labelSmall,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.appExtras.textTertiary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                ActivityHeatmap(solvedByDayEpoch = activity.solvedByDayEpoch)
+            }
+        }
+    }
+
+    item(key = "activity-streak") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            val extras = MaterialTheme.appExtras
-            Text(
-                text = "activity coming soon",
-                style = MaterialTheme.typography.labelMedium,
-                color = extras.textSecondary,
+            ActivityStat(
+                label = "STREAK",
+                value = activity.currentStreakDays.toString(),
+                delta = "days",
+                modifier = Modifier.weight(1f),
             )
-            Text(
-                text = "heatmap, streaks, and rating history will land here",
-                style = MaterialTheme.typography.labelSmall,
-                color = extras.textTertiary,
-                textAlign = TextAlign.Center,
+            ActivityStat(
+                label = "LONGEST",
+                value = activity.longestStreakDays.toString(),
+                delta = "days",
+                modifier = Modifier.weight(1f),
+            )
+            ActivityStat(
+                label = "THIS YEAR",
+                value = activity.solvedThisYear.toString(),
+                delta = "solved",
+                modifier = Modifier.weight(1f),
             )
         }
+    }
+
+    item(key = "rating-history") {
+        val history = activity.ratingHistory
+        OutlinedSurfaceCard {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "RATING HISTORY",
+                        style = MaterialTheme.typography.labelSmall,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.appExtras.textTertiary,
+                    )
+                    if (history.isNotEmpty()) {
+                        val last = history.last().rating
+                        val peak = history.maxOf { it.rating }
+                        Text(
+                            text = "peak $peak · now $last",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.appExtras.textSecondary,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.sm))
+                if (history.isEmpty()) {
+                    Text(
+                        text = "compete in a rated contest to see your rating here.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.appExtras.textTertiary,
+                    )
+                } else {
+                    // Normalize to 0..1 and hand to Sparkline.
+                    val minR = history.minOf { it.rating }.toFloat()
+                    val maxR = history.maxOf { it.rating }.toFloat()
+                    val span = (maxR - minR).coerceAtLeast(1f)
+                    val normalized = history.map { (it.rating - minR) / span }
+                    Sparkline(
+                        points = normalized,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        color = state.currentTier?.palette()?.strong
+                            ?: MaterialTheme.appExtras.accentVioletSoft,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutlinedSurfaceCard(content: @Composable () -> Unit) {
+    val extras = MaterialTheme.appExtras
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(extras.surfaceElevated, AppShapes.medium)
+            .border(0.5.dp, extras.borderSubtle, AppShapes.medium)
+            .padding(Spacing.md),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun ActivityStat(
+    label: String,
+    value: String,
+    delta: String,
+    modifier: Modifier = Modifier,
+) {
+    val extras = MaterialTheme.appExtras
+    Column(
+        modifier = modifier
+            .background(extras.surfaceElevated, AppShapes.medium)
+            .border(0.5.dp, extras.borderSubtle, AppShapes.medium)
+            .padding(Spacing.md),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.sp,
+            color = extras.textTertiary,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = delta,
+            style = MaterialTheme.typography.labelSmall,
+            color = extras.textTertiary,
+        )
     }
 }
 

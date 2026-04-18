@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rakibjoy.problembuddy.core.database.dao.CounterDao
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
+import com.rakibjoy.problembuddy.domain.model.Submission
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
 import com.rakibjoy.problembuddy.domain.usecase.ComputeWeakTagsUseCase
@@ -16,6 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -100,6 +103,12 @@ class ProfileViewModel @Inject constructor(
                     WeakTagStat(tag = tag, coverage = coverage.coerceIn(0f, 1f))
                 }
 
+                val ratingHistory = codeforces.userRating(handle).getOrNull()
+                    ?.map { RatingPoint(timeSeconds = it.ratingUpdateTimeSeconds, rating = it.newRating) }
+                    .orEmpty()
+
+                val activity = buildActivityStats(submissions, ratingHistory)
+
                 _state.value = ProfileState(
                     loading = false,
                     handle = userInfo.handle,
@@ -111,6 +120,7 @@ class ProfileViewModel @Inject constructor(
                     error = null,
                     stale = stale,
                     fetchedAtMillis = fetchedAt,
+                    activity = activity,
                 )
             } catch (t: Throwable) {
                 _state.value = _state.value.copy(
@@ -119,5 +129,76 @@ class ProfileViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private fun buildActivityStats(
+        submissions: List<Submission>,
+        ratingHistory: List<RatingPoint>,
+    ): ActivityStats {
+        if (submissions.isEmpty() && ratingHistory.isEmpty()) return ActivityStats.Empty
+
+        val acceptedByProblemByDay: Map<Long, Int> = submissions.asSequence()
+            .filter { it.verdict == "OK" }
+            .filter { it.problem.contestId != 0 && it.problem.problemIndex.isNotBlank() }
+            // Dedup: first AC of a given problem only counts once per day.
+            .distinctBy { Triple(it.problem.contestId, it.problem.problemIndex, dayEpoch(it.creationTimeSeconds)) }
+            .groupingBy { dayEpoch(it.creationTimeSeconds) }
+            .eachCount()
+
+        val today = LocalDate.now(ZoneId.systemDefault()).toEpochDay()
+        val currentStreak = computeCurrentStreak(acceptedByProblemByDay, todayEpoch = today)
+        val longestStreak = computeLongestStreak(acceptedByProblemByDay)
+
+        val yearStart = LocalDate.now(ZoneId.systemDefault())
+            .withDayOfYear(1)
+            .toEpochDay()
+        val solvedThisYear = acceptedByProblemByDay
+            .filterKeys { it >= yearStart }
+            .values
+            .sum()
+
+        return ActivityStats(
+            solvedByDayEpoch = acceptedByProblemByDay,
+            currentStreakDays = currentStreak,
+            longestStreakDays = longestStreak,
+            solvedThisYear = solvedThisYear,
+            ratingHistory = ratingHistory,
+        )
+    }
+
+    private fun dayEpoch(epochSeconds: Long): Long {
+        // Convert an epoch-seconds timestamp to the day index in the user's local zone.
+        return java.time.Instant.ofEpochSecond(epochSeconds)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .toEpochDay()
+    }
+
+    private fun computeCurrentStreak(byDay: Map<Long, Int>, todayEpoch: Long): Int {
+        if (byDay.isEmpty()) return 0
+        // Allow the streak to still count if today is empty but yesterday was active.
+        var cursor = if (byDay[todayEpoch] == null && byDay[todayEpoch - 1] != null) {
+            todayEpoch - 1
+        } else {
+            todayEpoch
+        }
+        var streak = 0
+        while ((byDay[cursor] ?: 0) > 0) {
+            streak++
+            cursor -= 1
+        }
+        return streak
+    }
+
+    private fun computeLongestStreak(byDay: Map<Long, Int>): Int {
+        if (byDay.isEmpty()) return 0
+        val activeDays = byDay.keys.sorted()
+        var longest = 1
+        var running = 1
+        for (i in 1 until activeDays.size) {
+            running = if (activeDays[i] == activeDays[i - 1] + 1) running + 1 else 1
+            if (running > longest) longest = running
+        }
+        return longest
     }
 }
