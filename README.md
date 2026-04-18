@@ -2,13 +2,16 @@
 
 A native Kotlin Android app that helps Codeforces users pick their next problem.
 
-**The core idea: learn from who you look up to.** Pick a Codeforces handle you
-find inspiring — `tourist`, `jiangly`, your favorite Red — and ProblemBuddy
-pulls their accepted problems into your local library. Your recommendations
-are then tuned to that level, gently pushing you toward the kind of problems
-they solve. It builds a local picture of your practice — solved problems, weak
-topics, contest history, daily streak — and ranks the corpus against your
-weaknesses. No account, no server, no tracking. Everything runs on your device.
+**The core idea: learn from who you look up to.** Add a handful of Codeforces
+handles you find inspiring — `tourist`, `jiangly`, your favorite Red, the
+specialist two bands ahead of you — and ProblemBuddy pulls all of their
+accepted problems into one local library. The more handles you train on, the
+richer and more accurate the recommendations, since the library spans a wider
+set of problem styles and difficulty bands. Your practice — solved problems,
+weak topics, contest history, daily streak — is then ranked against that
+library so the app can nudge you toward the kinds of problems these stronger
+players actually solve. No account, no server, no tracking. Everything runs
+on your device.
 
 This is the Android port of the web app at
 [TheRakibJoy/ProblemBuddy](https://github.com/TheRakibJoy/ProblemBuddy) (Django +
@@ -41,11 +44,12 @@ The APK is signed with a debug key, so Android shows an "unknown source" warning
   tag chips. Swipe right to open, swipe left to skip; buttons for Solve / Mark
   Solved / Skip. Filter sheet with chip-based include/exclude tag selection,
   rating range, weak-only toggle, count. Staleness banner when data is cached.
-- **Train** — framed as *"learn from who you look up to"*: enter a handle you're
-  inspired by and the app pulls their accepted problems into your local library,
-  tuning recommendations toward that level. Shows a **corpus overview** (total
-  problems, distinct tags, handle count, by-difficulty histogram), a live-
-  validated handle input, progress card for the active ingest, and a list of
+- **Train** — framed as *"learn from who you look up to"*: add as many
+  inspiring handles as you want — each one you ingest grows the corpus and
+  sharpens recommendations, since more diverse sources cover more problem
+  styles and difficulty bands. Shows a **corpus overview** (total problems,
+  distinct tags, handle count, by-difficulty histogram), a live-validated
+  handle input, progress card for the active ingest, and a list of
   previously-trained handles with re-sync / remove actions.
 - **Profile** — hero with handle + tier badge + 3-stat row. Four tabs:
   1. **Tier ladder** — full vertical CF ladder, tier you're at is highlighted.
