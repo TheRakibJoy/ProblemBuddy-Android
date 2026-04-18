@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.IconButton
 import com.rakibjoy.problembuddy.core.ui.components.AnimatedProgressBar
 import com.rakibjoy.problembuddy.core.ui.components.EmptyCorpusCard
 import com.rakibjoy.problembuddy.core.ui.components.EmptyStateIllustration
@@ -83,6 +86,7 @@ import com.rakibjoy.problembuddy.domain.model.Tier
 @Composable
 fun ProfileScreen(
     onNavigateToTrain: (() -> Unit)? = null,
+    onNavigateToSettings: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -90,6 +94,7 @@ fun ProfileScreen(
         state = state,
         onIntent = viewModel::onIntent,
         onNavigateToTrain = onNavigateToTrain,
+        onNavigateToSettings = onNavigateToSettings,
     )
 }
 
@@ -98,10 +103,24 @@ fun ProfileScreen(
     state: ProfileState,
     onIntent: (ProfileIntent) -> Unit,
     onNavigateToTrain: (() -> Unit)? = null,
+    onNavigateToSettings: (() -> Unit)? = null,
 ) {
     GradientSurface {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppTopBar()
+            AppTopBar(
+                actions = {
+                    if (onNavigateToSettings != null) {
+                        IconButton(onClick = onNavigateToSettings) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = "Settings",
+                                tint = MaterialTheme.appExtras.textTertiary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                },
+            )
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     state.loading -> LoadingContent()

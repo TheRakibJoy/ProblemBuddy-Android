@@ -173,6 +173,13 @@ fun ProblemBuddyNavHost(
             ) {
                 ProfileScreen(
                     onNavigateToTrain = { navController.navigate(Train) },
+                    onNavigateToSettings = {
+                        navController.navigate(Settings) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                 )
             }
             composable<Settings>(
