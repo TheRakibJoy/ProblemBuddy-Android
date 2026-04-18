@@ -185,7 +185,7 @@ fun OnboardingScreen(
                 Spacer(Modifier.weight(1f))
 
                 Text(
-                    text = "no account. no backend. all local.",
+                    text = "we'll fetch your profile from codeforces.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.appExtras.textTertiary,
                     textAlign = TextAlign.Center,

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,24 +35,26 @@ fun RatingRail(
 ) {
     val color = tier.palette().strong
     Column(
-        modifier = modifier.width(40.dp),
+        modifier = modifier.widthIn(min = 52.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = rating.toString(),
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontSize = 17.sp,
-                lineHeight = 17.sp,
+                lineHeight = 20.sp,
                 fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.85).sp, // -0.05em @ 17sp
+                letterSpacing = 0.sp,
             ),
             color = color,
+            maxLines = 1,
+            softWrap = false,
         )
         Spacer(Modifier.height(5.dp))
         Box(
             modifier = Modifier
                 .width(3.dp)
-                .height(28.dp)
+                .height(24.dp)
                 .background(color.copy(alpha = 0.5f), RoundedCornerShape(2.dp)),
         )
     }

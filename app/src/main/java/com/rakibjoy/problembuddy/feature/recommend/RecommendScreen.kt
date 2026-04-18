@@ -38,7 +38,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilterAltOff
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -442,8 +442,8 @@ private fun RecommendProblemCard(
                         tint = extras.textTertiary,
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.BookmarkBorder,
-                            contentDescription = "Save for later",
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Skip",
                             modifier = Modifier.size(13.dp),
                         )
                     }

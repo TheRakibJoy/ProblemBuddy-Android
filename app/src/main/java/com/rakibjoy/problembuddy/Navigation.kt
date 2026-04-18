@@ -76,11 +76,16 @@ fun ProblemBuddyNavHost(
     val currentDestination = backStackEntry?.destination
     val selectedTab = currentDestination.toNavDestination()
     val haptics = LocalHapticFeedback.current
+    // Onboarding is blocking: every tab in the main app requires a handle, so
+    // the bar renders but its items are disabled until the user finishes setup.
+    val navEnabled = currentDestination == null ||
+        !currentDestination.hasRoute(Onboarding::class)
 
     Scaffold(
         bottomBar = {
             AppBottomBar(
                 selected = selectedTab,
+                enabled = navEnabled,
                 onSelect = { dest ->
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     navController.navigate(dest.route()) {

@@ -47,6 +47,7 @@ fun AppBottomBar(
     selected: NavDestination?,
     onSelect: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val extras = MaterialTheme.appExtras
     Column(
@@ -67,12 +68,15 @@ fun AppBottomBar(
         ) {
             NavDestination.entries.forEach { dest ->
                 val isSelected = dest == selected
-                val tint = if (isSelected) extras.accentVioletSoft else extras.textTertiary
+                val baseTint = if (isSelected) extras.accentVioletSoft else extras.textTertiary
+                val tint = if (enabled) baseTint else baseTint.copy(alpha = 0.35f)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { onSelect(dest) }
+                        .then(
+                            if (enabled) Modifier.clickable { onSelect(dest) } else Modifier,
+                        )
                         .padding(vertical = 4.dp),
                 ) {
                     Icon(
