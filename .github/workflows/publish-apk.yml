@@ -66,16 +66,25 @@ jobs:
 
       - name: Push to downloads branch
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Create an orphan branch so history stays small (no APK bloat on main).
-          git checkout --orphan downloads
-          git rm -rf . >/dev/null 2>&1 || true
-          cp /tmp/publish/* .
-          git add -A
-          git commit -m "Publish APK ${GITHUB_SHA::7}"
+          # Build a completely clean orphan tree in a scratch worktree so we
+          # can't accidentally capture build intermediates (which contain the
+          # Firebase client key and other resources that should never land in
+          # the downloads branch).
+          SCRATCH="$(mktemp -d)"
+          cp -r /tmp/publish/. "$SCRATCH"/
+          cd "$SCRATCH"
+          git init -q -b downloads
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          # Explicit, narrow add — never `-A` here.
+          git add ProblemBuddy-*.apk README.md
+          git commit -q -m "Publish APK ${GITHUB_SHA::7}"
           git push --force origin downloads

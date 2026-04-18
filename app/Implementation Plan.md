@@ -72,7 +72,6 @@ See the Python implementations for exact algorithms:
 | Images | **Coil** (Compose integration) | Avatar loading from Codeforces `titlePhoto` |
 | Async | **Coroutines + Flow** | Structured concurrency baked into every layer |
 | Navigation | **androidx.navigation.compose** (type-safe) | Standard, integrates with Hilt |
-| Telemetry | **Firebase Analytics + Crashlytics** | Analytics always on; Crashlytics release-only |
 | Testing | **JUnit 5 + MockK + Turbine** (unit) + **Compose UI Test** + **Room `MigrationTestHelper`** | Low ceremony, coroutine-aware |
 
 **Avoid** unless you hit a concrete need: Dagger (use Hilt), RxJava, LiveData
@@ -505,15 +504,6 @@ up. Previews use a hand-constructed state for instant rendering.
   rating/tier card.
 - **Home dashboard additions**: streak-at-risk banner, next-tier progress
   pill, weekly-goal card.
-
-### Phase 10 — Firebase integration (post-MVP)
-
-- `google-services.json` in `app/`, Google Services + Crashlytics Gradle
-  plugins.
-- `Firebase.analytics.setAnalyticsCollectionEnabled(true)` on app start —
-  both debug and release.
-- `Firebase.crashlytics.isCrashlyticsCollectionEnabled = !BuildConfig.DEBUG`
-  so local crashes don't pollute the production dashboard.
 
 ---
 
