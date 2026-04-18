@@ -84,7 +84,7 @@ class RecommendScreenTest {
     }
 
     @Test
-    fun mark_solved_emits_intent() {
+    fun skip_button_emits_intent() {
         val problem = fixtureProblem(42, 1500, listOf("dp", "trees"))
         val received = mutableListOf<RecommendIntent>()
         composeRule.setContent {
@@ -94,12 +94,13 @@ class RecommendScreenTest {
             )
         }
 
-        // Mark solved now lives inside an overflow dropdown — open it first.
-        composeRule.onNodeWithContentDescription("More actions").performClick()
-        composeRule.onNodeWithText("Mark solved").performClick()
+        // The card's right-side action is a Skip icon button with
+        // contentDescription "Skip". Left-swipe triggers the same intent;
+        // testing the button click is simpler and covers the same path.
+        composeRule.onNodeWithContentDescription("Skip").performClick()
 
-        val markSolved = received.filterIsInstance<RecommendIntent.MarkSolved>()
-        assertEquals(1, markSolved.size)
-        assertEquals(problem, markSolved.first().problem)
+        val skipped = received.filterIsInstance<RecommendIntent.Skip>()
+        assertEquals(1, skipped.size)
+        assertEquals(problem, skipped.first().problem)
     }
 }
