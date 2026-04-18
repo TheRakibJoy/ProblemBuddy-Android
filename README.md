@@ -1,9 +1,14 @@
 # ProblemBuddy Android
 
 A native Kotlin Android app that helps Codeforces users pick their next problem.
-It builds a local picture of your practice — solved problems, weak topics, contest
-history, daily streak — and recommends problems tuned to you. No account, no
-server, no tracking. Everything runs on your device.
+
+**The core idea: learn from who you look up to.** Pick a Codeforces handle you
+find inspiring — `tourist`, `jiangly`, your favorite Red — and ProblemBuddy
+pulls their accepted problems into your local library. Your recommendations
+are then tuned to that level, gently pushing you toward the kind of problems
+they solve. It builds a local picture of your practice — solved problems, weak
+topics, contest history, daily streak — and ranks the corpus against your
+weaknesses. No account, no server, no tracking. Everything runs on your device.
 
 This is the Android port of the web app at
 [TheRakibJoy/ProblemBuddy](https://github.com/TheRakibJoy/ProblemBuddy) (Django +
