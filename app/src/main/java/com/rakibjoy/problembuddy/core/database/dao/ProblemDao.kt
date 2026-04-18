@@ -7,6 +7,12 @@ import androidx.room.Query
 import com.rakibjoy.problembuddy.core.database.entity.ProblemEntity
 import kotlinx.coroutines.flow.Flow
 
+data class ProblemKey(
+    val id: Long,
+    val contestId: Int,
+    val problemIndex: String,
+)
+
 @Dao
 interface ProblemDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -23,6 +29,9 @@ interface ProblemDao {
 
     @Query("SELECT id FROM problems WHERE contestId = :contestId AND problemIndex = :problemIndex LIMIT 1")
     suspend fun findId(contestId: Int, problemIndex: String): Long?
+
+    @Query("SELECT id, contestId, problemIndex FROM problems WHERE id IN (:ids)")
+    suspend fun findKeysByIds(ids: List<Long>): List<ProblemKey>
 
     @Query("DELETE FROM problems")
     suspend fun deleteAll()

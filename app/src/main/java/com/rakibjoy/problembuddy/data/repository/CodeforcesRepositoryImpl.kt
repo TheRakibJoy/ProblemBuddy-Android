@@ -37,7 +37,22 @@ class CodeforcesRepositoryImpl @Inject constructor(
     private val settingsStore: SettingsStore,
 ) : CodeforcesRepository {
 
-    private val submissionCacheByHandle = ConcurrentHashMap<String, List<Submission>>()
+    // Bounded LRU of per-handle submission snapshots. Cap at 3 handles
+    // (primary + compare + one spare) to keep memory usage predictable.
+    private val submissionCacheByHandle: MutableMap<String, List<Submission>> =
+        object : LinkedHashMap<String, List<Submission>>(4, 0.75f, true) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<String, List<Submission>>?,
+            ): Boolean = size > 3
+        }
+    private val submissionCacheLock = Any()
+
+    private fun submissionCacheGet(handle: String): List<Submission>? =
+        synchronized(submissionCacheLock) { submissionCacheByHandle[handle] }
+
+    private fun submissionCachePut(handle: String, value: List<Submission>) {
+        synchronized(submissionCacheLock) { submissionCacheByHandle[handle] = value }
+    }
 
     private data class CacheEntry<T>(val value: T, val expiresAt: Long)
 
@@ -143,7 +158,7 @@ class CodeforcesRepositoryImpl @Inject constructor(
         requestedCount: Int,
     ): Result<Fresh<List<Submission>>> = withContext(Dispatchers.IO) {
         val persistKey = "userStatus:$handle:1:$requestedCount"
-        val cached = submissionCacheByHandle[handle] ?: emptyList()
+        val cached = submissionCacheGet(handle) ?: emptyList()
         val checkpoint = runCatching {
             settingsStore.lastSubmissionIdByHandle.first()[handle]
         }.getOrNull()
@@ -191,7 +206,7 @@ class CodeforcesRepositoryImpl @Inject constructor(
                 }
             }
 
-            submissionCacheByHandle[handle] = merged
+            submissionCachePut(handle, merged)
             merged.maxByOrNull { it.id }?.let { top ->
                 runCatching { settingsStore.setLastSubmissionId(handle, top.id) }
             }

@@ -18,8 +18,15 @@ class TrainingJobRepositoryImpl @Inject constructor(
     override fun observeLatest(): Flow<TrainingJob?> =
         dao.observeLatest().map { it?.toDomain() }
 
+    override fun observeAll(): Flow<List<TrainingJob>> =
+        dao.observeAll().map { list -> list.map { it.toDomain() } }
+
     override suspend fun upsert(job: TrainingJob): Long =
         dao.upsert(job.toEntity())
+
+    override suspend fun deleteByHandle(handle: String) {
+        dao.deleteByHandle(handle)
+    }
 
     override suspend fun clearAll() {
         dao.deleteAll()

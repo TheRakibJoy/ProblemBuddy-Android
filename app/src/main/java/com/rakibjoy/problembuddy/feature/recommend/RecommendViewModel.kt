@@ -2,12 +2,12 @@ package com.rakibjoy.problembuddy.feature.recommend
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rakibjoy.problembuddy.core.database.dao.InteractionDao
-import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
-import com.rakibjoy.problembuddy.core.database.entity.InteractionEntity
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
+import com.rakibjoy.problembuddy.domain.model.Interaction
 import com.rakibjoy.problembuddy.domain.model.Problem
 import com.rakibjoy.problembuddy.domain.model.Tier
+import com.rakibjoy.problembuddy.domain.repository.InteractionRepository
+import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
 import com.rakibjoy.problembuddy.domain.repository.ReviewRepository
 import com.rakibjoy.problembuddy.domain.usecase.GetRecommendationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,8 +25,8 @@ import javax.inject.Inject
 @HiltViewModel
 class RecommendViewModel @Inject constructor(
     private val getRecommendations: GetRecommendationsUseCase,
-    private val interactionDao: InteractionDao,
-    private val problemDao: ProblemDao,
+    private val interactionRepository: InteractionRepository,
+    private val problemRepository: ProblemRepository,
     private val settingsStore: SettingsStore,
     private val reviewRepository: ReviewRepository,
 ) : ViewModel() {
@@ -41,7 +41,7 @@ class RecommendViewModel @Inject constructor(
         viewModelScope.launch {
             val recsPerLoad = runCatching { settingsStore.recsPerLoad.first() }.getOrDefault(10)
             val hasCorpus = runCatching {
-                Tier.entries.sumOf { problemDao.countByTier(it.name.lowercase()) } > 0
+                Tier.entries.sumOf { problemRepository.countByTier(it) } > 0
             }.getOrDefault(true)
             _state.update {
                 it.copy(
@@ -63,7 +63,7 @@ class RecommendViewModel @Inject constructor(
                 refresh()
             }
             is RecommendIntent.MarkSolved -> viewModelScope.launch {
-                val problemId = recordInteraction(intent.problem, status = "solved")
+                val problemId = recordInteraction(intent.problem, status = Interaction.Status.SOLVED)
                 if (problemId != null) {
                     reviewRepository.scheduleInitial(
                         problemId = problemId,
@@ -75,7 +75,7 @@ class RecommendViewModel @Inject constructor(
                 _effects.send(RecommendEffect.Toast("Marked solved"))
             }
             is RecommendIntent.Skip -> viewModelScope.launch {
-                recordInteraction(intent.problem, status = "not_interested")
+                recordInteraction(intent.problem, status = Interaction.Status.NOT_INTERESTED)
                 _state.update { it.copy(problems = it.problems.filterNot { p -> p.sameAs(intent.problem) }) }
                 _effects.send(RecommendEffect.Toast("Skipped"))
             }
@@ -106,10 +106,10 @@ class RecommendViewModel @Inject constructor(
         )
     }
 
-    private suspend fun recordInteraction(problem: Problem, status: String): Long? {
-        val id = problemDao.findId(problem.contestId, problem.problemIndex) ?: return null
-        interactionDao.upsert(
-            InteractionEntity(
+    private suspend fun recordInteraction(problem: Problem, status: Interaction.Status): Long? {
+        val id = problemRepository.findId(problem.contestId, problem.problemIndex) ?: return null
+        interactionRepository.upsert(
+            Interaction(
                 problemId = id,
                 status = status,
                 createdAt = System.currentTimeMillis(),

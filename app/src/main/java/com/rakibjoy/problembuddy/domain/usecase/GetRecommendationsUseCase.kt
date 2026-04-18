@@ -1,16 +1,14 @@
 package com.rakibjoy.problembuddy.domain.usecase
 
-import com.rakibjoy.problembuddy.core.database.dao.InteractionDao
-import com.rakibjoy.problembuddy.core.database.dao.ProblemDao
-import com.rakibjoy.problembuddy.core.database.entity.ProblemEntity
 import com.rakibjoy.problembuddy.core.datastore.SettingsStore
-import com.rakibjoy.problembuddy.data.mapper.toDomain
 import com.rakibjoy.problembuddy.data.recommender.TierIndex
 import com.rakibjoy.problembuddy.domain.model.Filters
-import com.rakibjoy.problembuddy.domain.model.Problem
+import com.rakibjoy.problembuddy.domain.model.Interaction
 import com.rakibjoy.problembuddy.domain.model.RecommendationsResult
 import com.rakibjoy.problembuddy.domain.model.Tier
 import com.rakibjoy.problembuddy.domain.repository.CodeforcesRepository
+import com.rakibjoy.problembuddy.domain.repository.InteractionRepository
+import com.rakibjoy.problembuddy.domain.repository.ProblemRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -19,8 +17,8 @@ import javax.inject.Inject
 class GetRecommendationsUseCase @Inject constructor(
     private val codeforces: CodeforcesRepository,
     private val computeWeakTags: ComputeWeakTagsUseCase,
-    private val problemDao: ProblemDao,
-    private val interactionDao: InteractionDao,
+    private val problemRepository: ProblemRepository,
+    private val interactionRepository: InteractionRepository,
     private val settingsStore: SettingsStore,
 ) {
     suspend operator fun invoke(filters: Filters): Result<RecommendationsResult> {
@@ -67,42 +65,52 @@ class GetRecommendationsUseCase @Inject constructor(
             }
         }
 
-        val excludedProblemIds: Set<Long> = interactionDao.observeAll().first()
+        val excludedProblemIds: Set<Long> = interactionRepository.getAll()
             .asSequence()
-            .filter { it.status == "solved" || it.status == "not_interested" || it.status == "hidden" }
+            .filter {
+                it.status == Interaction.Status.SOLVED ||
+                    it.status == Interaction.Status.NOT_INTERESTED ||
+                    it.status == Interaction.Status.HIDDEN
+            }
             .map { it.problemId }
             .toSet()
 
+        // Resolve interaction problemIds back to (contestId, problemIndex) pairs so
+        // we can dedupe against Problem domain values (which no longer carry the row id).
+        val excludedKeys: Set<Pair<Int, String>> = if (excludedProblemIds.isEmpty()) {
+            emptySet()
+        } else {
+            problemRepository.resolveKeys(excludedProblemIds).values.toSet()
+        }
+
         val weakTags = computeWeakTags(tier, perTagSolved, topN = 10, minCorpusCount = 5)
 
-        val entities: List<ProblemEntity> = withContext(Dispatchers.IO) {
-            problemDao.observeByTier(tier.name.lowercase()).first()
+        val problems = withContext(Dispatchers.IO) {
+            problemRepository.observeByTier(tier).first()
         }
-        val problems: List<Problem> = entities.map { it.toDomain() }
 
         val tierIndex = TierIndex.build(problems)
         val rankedIndices = tierIndex.rank(weakTags).ifEmpty { problems.indices.toList() }
 
         val filtered = rankedIndices.asSequence()
-            .map { idx -> entities[idx] to problems[idx] }
-            .filter { (_, p) -> (p.contestId to p.problemIndex) !in solvedKeys }
-            .filter { (e, _) -> e.id !in excludedProblemIds }
-            .filter { (_, p) ->
+            .map { idx -> problems[idx] }
+            .filter { p -> (p.contestId to p.problemIndex) !in solvedKeys }
+            .filter { p -> (p.contestId to p.problemIndex) !in excludedKeys }
+            .filter { p ->
                 val rating = p.rating
                 if (effectiveMinRating != null && (rating == null || rating < effectiveMinRating)) return@filter false
                 if (effectiveMaxRating != null && (rating == null || rating > effectiveMaxRating)) return@filter false
                 true
             }
-            .filter { (_, p) ->
+            .filter { p ->
                 if (filters.includeTags.isEmpty()) true
                 else p.tags.any { it in filters.includeTags }
             }
-            .filter { (_, p) -> p.tags.none { it in filters.excludeTags } }
-            .filter { (_, p) ->
+            .filter { p -> p.tags.none { it in filters.excludeTags } }
+            .filter { p ->
                 if (!filters.weakOnly || weakTags.isEmpty()) true
                 else p.tags.any { it in weakTags }
             }
-            .map { it.second }
             .take(filters.count)
             .toList()
 
