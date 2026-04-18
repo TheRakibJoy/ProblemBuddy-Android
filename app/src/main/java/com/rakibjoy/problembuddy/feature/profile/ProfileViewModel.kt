@@ -38,6 +38,7 @@ class ProfileViewModel @Inject constructor(
     private val codeforces: CodeforcesRepository,
     private val computeWeakTags: ComputeWeakTagsUseCase,
     private val counterDao: CounterDao,
+    private val problemDao: com.rakibjoy.problembuddy.core.database.dao.ProblemDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileState())
@@ -200,6 +201,34 @@ class ProfileViewModel @Inject constructor(
                     userTier = tier,
                 )
 
+                // Profile hero stats: total problems solved (unique key) + current-tier coverage.
+                val solvedKeys: Set<Pair<Int, String>> = submissions.asSequence()
+                    .filter { it.verdict == "OK" }
+                    .filter { it.problem.contestId != 0 && it.problem.problemIndex.isNotBlank() }
+                    .map { it.problem.contestId to it.problem.problemIndex }
+                    .toSet()
+                val problemsSolved = solvedKeys.size
+                val solvedInTier = submissions.asSequence()
+                    .filter { it.verdict == "OK" }
+                    .filter { it.problem.contestId != 0 && it.problem.problemIndex.isNotBlank() }
+                    .filter { sub ->
+                        val r = sub.problem.rating ?: return@filter false
+                        Tier.forMaxRating(r) == tier
+                    }
+                    .map { it.problem.contestId to it.problem.problemIndex }
+                    .toSet()
+                    .size
+                val corpusInTier = runCatching {
+                    problemDao.countByTier(tier.name.lowercase())
+                }.getOrDefault(0)
+                val coveragePct = if (corpusInTier > 0) {
+                    ((solvedInTier.toFloat() / corpusInTier.toFloat()) * 100f)
+                        .toInt()
+                        .coerceIn(0, 100)
+                } else {
+                    null
+                }
+
                 _state.value = ProfileState(
                     loading = false,
                     handle = userInfo.handle,
@@ -212,6 +241,8 @@ class ProfileViewModel @Inject constructor(
                     stale = stale,
                     fetchedAtMillis = fetchedAt,
                     activity = activity,
+                    problemsSolved = problemsSolved,
+                    coveragePct = coveragePct,
                     compareHandle = existingCompare,
                     compareRating = existingCompareRating,
                     compareTier = existingCompareTier,
