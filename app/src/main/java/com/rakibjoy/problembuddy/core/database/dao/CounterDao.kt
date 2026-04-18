@@ -20,6 +20,9 @@ interface CounterDao {
     @Query("SELECT * FROM counters WHERE tier = :tier")
     suspend fun getByTier(tier: String): List<CounterEntity>
 
+    @Query("SELECT COUNT(DISTINCT tagName) FROM counters")
+    fun observeDistinctTagCount(): Flow<Int>
+
     @Query("DELETE FROM counters")
     suspend fun deleteAll()
 }

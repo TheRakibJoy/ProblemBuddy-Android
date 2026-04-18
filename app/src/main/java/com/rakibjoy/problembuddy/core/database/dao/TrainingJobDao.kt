@@ -14,6 +14,12 @@ interface TrainingJobDao {
     @Query("SELECT * FROM training_jobs ORDER BY updatedAt DESC LIMIT 1")
     fun observeLatest(): Flow<TrainingJobEntity?>
 
+    @Query("SELECT * FROM training_jobs ORDER BY updatedAt DESC")
+    fun observeAll(): Flow<List<TrainingJobEntity>>
+
+    @Query("DELETE FROM training_jobs WHERE handle = :handle")
+    suspend fun deleteByHandle(handle: String)
+
     @Query("DELETE FROM training_jobs")
     suspend fun deleteAll()
 }

@@ -20,19 +20,27 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -105,10 +113,12 @@ fun TrainScreen(
             Column(
                 modifier = Modifier
                     .padding(padding)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
+                CorpusOverviewCard(overview = state.corpus)
                 IntroBlock()
                 HandleField(
                     value = state.handleInput,
@@ -156,6 +166,14 @@ fun TrainScreen(
                     exit = fadeOut(),
                 ) {
                     SuccessBanner()
+                }
+                if (state.handleHistory.isNotEmpty()) {
+                    HandleHistorySection(
+                        history = state.handleHistory,
+                        canTrigger = !running,
+                        onReRun = { onIntent(TrainIntent.ReRunHandle(it)) },
+                        onRemove = { onIntent(TrainIntent.RemoveHandle(it)) },
+                    )
                 }
             }
         }
@@ -396,6 +414,268 @@ private fun TrainingJob.Status.label(): String = when (this) {
     TrainingJob.Status.RUNNING -> "running"
     TrainingJob.Status.SUCCESS -> "completed"
     TrainingJob.Status.FAILED -> "failed"
+}
+
+@Composable
+private fun CorpusOverviewCard(overview: CorpusOverview) {
+    val extras = MaterialTheme.appExtras
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(extras.surfaceElevated)
+            .border(0.5.dp, extras.borderSubtle, RoundedCornerShape(10.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Text(
+            text = "CORPUS",
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.3.sp,
+            color = extras.textTertiary,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            StatCell(label = "PROBLEMS", value = overview.totalProblems.formatK(), modifier = Modifier.weight(1f))
+            StatCell(label = "TAGS", value = overview.distinctTags.toString(), modifier = Modifier.weight(1f))
+            StatCell(label = "HANDLES", value = overview.handleCount.toString(), modifier = Modifier.weight(1f))
+        }
+        if (overview.perTierCounts.values.any { it > 0 }) {
+            Text(
+                text = "BY DIFFICULTY",
+                style = MaterialTheme.typography.labelSmall,
+                letterSpacing = 1.sp,
+                color = extras.textTertiary,
+            )
+            DifficultyHistogram(overview.perTierCounts)
+        } else {
+            Text(
+                text = "no problems yet — add a handle below to start.",
+                style = MaterialTheme.typography.bodySmall,
+                color = extras.textTertiary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatCell(label: String, value: String, modifier: Modifier = Modifier) {
+    val extras = MaterialTheme.appExtras
+    Column(modifier = modifier) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.sp,
+            color = extras.textTertiary,
+        )
+    }
+}
+
+/**
+ * Rating-range histogram: rows are labelled by the problem-rating band
+ * ("< 1200", "1200–1399", …) rather than the user-rank name. CP users
+ * think in rating bands, so the labels reflect that.
+ */
+@Composable
+private fun DifficultyHistogram(perTierCounts: Map<Tier, Int>) {
+    val extras = MaterialTheme.appExtras
+    val tiersInOrder = Tier.entries
+    val max = (perTierCounts.values.maxOrNull() ?: 0).coerceAtLeast(1)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        tiersInOrder.forEach { tier ->
+            val count = perTierCounts[tier] ?: 0
+            if (count == 0) return@forEach
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = tier.ratingRangeLabel(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tier.palette().strong,
+                    modifier = Modifier.width(76.dp),
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(extras.surfaceRaised),
+                ) {
+                    val fraction = count.toFloat() / max.toFloat()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(tier.palette().strong),
+                    )
+                }
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = extras.textTertiary,
+                    modifier = Modifier.width(40.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HandleHistorySection(
+    history: List<TrainedHandle>,
+    canTrigger: Boolean,
+    onReRun: (String) -> Unit,
+    onRemove: (String) -> Unit,
+) {
+    val extras = MaterialTheme.appExtras
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Text(
+            text = "TRAINED HANDLES",
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.3.sp,
+            color = extras.textTertiary,
+        )
+        history.forEach { item ->
+            TrainedHandleRow(
+                item = item,
+                canTrigger = canTrigger,
+                onReRun = { onReRun(item.handle) },
+                onRemove = { onRemove(item.handle) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrainedHandleRow(
+    item: TrainedHandle,
+    canTrigger: Boolean,
+    onReRun: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val extras = MaterialTheme.appExtras
+    val statusColor = when (item.lastStatus) {
+        TrainingJob.Status.SUCCESS -> extras.deltaPositive
+        TrainingJob.Status.FAILED -> extras.deltaNegative
+        TrainingJob.Status.RUNNING, TrainingJob.Status.QUEUED -> MaterialTheme.colorScheme.primary
+        null -> extras.textTertiary
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(extras.surfaceElevated)
+            .border(0.5.dp, extras.borderSubtle, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(statusColor),
+        )
+        Spacer(Modifier.width(Spacing.sm))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.handle,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = buildString {
+                    append(
+                        when (item.lastStatus) {
+                            TrainingJob.Status.SUCCESS -> "synced"
+                            TrainingJob.Status.FAILED -> "failed"
+                            TrainingJob.Status.RUNNING -> "running"
+                            TrainingJob.Status.QUEUED -> "queued"
+                            null -> "added"
+                        },
+                    )
+                    val ts = item.lastRunAtMillis
+                    if (ts != null && ts > 0) {
+                        append(" · ")
+                        append(relativeTime(ts))
+                    }
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = extras.textTertiary,
+            )
+        }
+        IconButton(
+            onClick = onReRun,
+            enabled = canTrigger,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "re-sync ${item.handle}",
+                tint = if (canTrigger) extras.accentVioletSoft else extras.textTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.DeleteOutline,
+                contentDescription = "clear history for ${item.handle}",
+                tint = extras.textTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+/**
+ * Human-readable rating range for a difficulty bucket. NEWBIE collapses to
+ * "< 1200"; LEGENDARY becomes "3000+"; the rest are "lo–hi" where hi = next
+ * bucket's floor minus one.
+ */
+private fun Tier.ratingRangeLabel(): String {
+    val lo = floor
+    val hi = Tier.entries.firstOrNull { it.floor > lo }?.floor?.minus(1)
+    return when {
+        this == Tier.NEWBIE -> "< ${Tier.PUPIL.floor}"
+        hi == null -> "${lo}+"
+        else -> "$lo–$hi"
+    }
+}
+
+private fun Int.formatK(): String = when {
+    this >= 1_000_000 -> "%.1fM".format(this / 1_000_000f)
+    this >= 10_000 -> "${this / 1000}k"
+    this >= 1000 -> "%.1fk".format(this / 1000f)
+    else -> toString()
+}
+
+private fun relativeTime(timeMillis: Long): String {
+    val diffSec = (System.currentTimeMillis() - timeMillis) / 1000L
+    if (diffSec < 60) return "just now"
+    val diffMin = diffSec / 60
+    if (diffMin < 60) return "${diffMin}m ago"
+    val diffH = diffMin / 60
+    if (diffH < 24) return "${diffH}h ago"
+    val diffD = diffH / 24
+    if (diffD < 30) return "${diffD}d ago"
+    val diffMo = diffD / 30
+    if (diffMo < 12) return "${diffMo}mo ago"
+    return "${diffMo / 12}y ago"
 }
 
 @Preview(name = "Train - Idle", uiMode = Configuration.UI_MODE_NIGHT_YES)
